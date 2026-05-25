@@ -38,7 +38,7 @@ export const getMe = async () => {
  */
 export const refreshToken = async () => {
   const { data } = await axios.post(
-    '/api/v1/auth/refresh-token',
+    `${import.meta.env.VITE_API_BASE_URL}/auth/refresh-token`,
     {},
     { withCredentials: true }
   )

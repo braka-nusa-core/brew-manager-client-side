@@ -29,11 +29,12 @@ const isSkippedUrl = (url = '') =>
   SKIP_INTERCEPTOR_URLS.some((skip) => url.includes(skip))
 
 const apiClient = axios.create({
-  baseURL:         '/api/v1',
+  baseURL:         import.meta.env.VITE_API_BASE_URL,
   withCredentials: true,
   headers:         { 'Content-Type': 'application/json' },
   timeout:         15_000,
 })
+console.log(import.meta.env.VITE_API_BASE_URL)
 
 // ── Request interceptor: attach access token ──────────────────
 
@@ -69,7 +70,7 @@ apiClient.interceptors.response.use(
       try {
         // Raw axios — completely bypasses this interceptor
         const { data } = await axios.post(
-          '/api/v1/auth/refresh-token',
+          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh-token`,
           {},
           { withCredentials: true }
         )
@@ -100,4 +101,4 @@ apiClient.interceptors.response.use(
   }
 )
 
-export default apiClient
+export default apiClient  
