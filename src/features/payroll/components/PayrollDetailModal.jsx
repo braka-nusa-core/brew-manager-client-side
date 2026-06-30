@@ -2,7 +2,7 @@
 // Shows full payroll record detail + action buttons.
 //
 // Actions available per status:
-//   draft    → adjust (manualBonus/deductions) | approve | (no paid)
+//   draft    → adjust (manualBonus/deductions/kasbon) | approve | (no paid)
 //   approved → reject (back to draft)          | mark paid
 //   paid     → read only (terminal state)
 //
@@ -52,8 +52,9 @@ const formatPeriod = (period) =>
 const adjustSchema = z.object({
   manualBonus: z.coerce.number().min(0, 'Cannot be negative').optional().or(z.literal('')),
   deductions:  z.coerce.number().min(0, 'Cannot be negative').optional().or(z.literal('')),
+  kasbon:      z.coerce.number().min(0, 'Cannot be negative').optional().or(z.literal('')),
 }).refine(
-  (d) => d.manualBonus !== '' || d.deductions !== '',
+  (d) => d.manualBonus !== '' || d.deductions !== '' || d.kasbon !== '',
   { message: 'Provide at least one field' }
 )
 
@@ -124,6 +125,7 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
     defaultValues: {
       manualBonus: payroll?.manualBonus ?? '',
       deductions:  payroll?.deductions  ?? '',
+      kasbon:      payroll?.kasbon      ?? '',
     },
   })
 
@@ -132,6 +134,7 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
       reset({
         manualBonus: payroll.manualBonus ?? '',
         deductions:  payroll.deductions  ?? '',
+        kasbon:      payroll.kasbon      ?? '',
       })
       setShowAdjust(false)
     }
@@ -174,6 +177,8 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
       payload.manualBonus = Number(data.manualBonus)
     if (data.deductions !== '' && data.deductions !== undefined)
       payload.deductions = Number(data.deductions)
+    if (data.kasbon !== '' && data.kasbon !== undefined)
+      payload.kasbon = Number(data.kasbon)
 
     adjustMutation.mutate(
       { payrollId: payroll._id, payload },
@@ -195,181 +200,198 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
       title="Payroll Detail"
       size="md"
     >
-      <div className="space-y-5">
+      <div className="flex flex-col max-h-[80vh]">
+        <div className="flex-1 overflow-y-auto pr-1">
 
-        {/* Header: period + status */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold text-foreground">
-              {formatPeriod(payroll.period)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {payroll.salaryType === 'monthly' ? 'Monthly' : 'Daily'} — {payroll.workingDays} working days
-            </p>
-          </div>
-          <PayrollStatusBadge status={payroll.status} />
-        </div>
-
-        {/* Employee / Outlet info */}
-        <div className="bg-muted/40 rounded-lg px-1">
-          <InfoRow icon={User}     label="Employee" value={payroll.employeeId?.name ?? payroll.employeeId ?? '—'} />
-          <InfoRow icon={Building2} label="Outlet"  value={payroll.outletId?.name  ?? payroll.outletId  ?? '—'} />
-          <InfoRow icon={Calendar} label="Base Salary" value={formatIDR(payroll.baseSalary)} />
-        </div>
-
-        {/* Attendance summary */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Attendance
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: 'Present', value: payroll.presentDays, color: 'text-brand-600' },
-              { label: 'Absent',  value: payroll.absentDays,  color: 'text-destructive' },
-              { label: 'Cups',    value: payroll.totalCupsSold, color: 'text-amber-600' },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="bg-muted/50 rounded-lg p-2.5 text-center">
-                <p className={cn('text-xl font-bold', color)}>{value ?? 0}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Calculation breakdown */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Calculation
-          </p>
-          <div className="bg-muted/30 rounded-lg px-3 py-1">
-            <CalcRow label="Salary Earned"  value={formatIDR(payroll.salaryEarned)} />
-            <CalcRow label="Cups Bonus"     value={`+ ${formatIDR(payroll.cupsBonus)}`}    positive />
-            <CalcRow label="Manual Bonus"   value={`+ ${formatIDR(payroll.manualBonus)}`}  positive={payroll.manualBonus > 0} muted={!payroll.manualBonus} />
-            <CalcRow label="Deductions"     value={`− ${formatIDR(payroll.deductions)}`}   negative={payroll.deductions > 0} muted={!payroll.deductions} />
-            <CalcRow label="Total Pay"      value={formatIDR(payroll.totalPay)} bold />
-          </div>
-        </div>
-
-        {/* Adjust form — only for draft/approved */}
-        {!isPaid && showAdjust && (
-          <form onSubmit={handleSubmit(onAdjustSubmit)} noValidate>
-            <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-3">
-              <p className="text-xs font-semibold text-foreground">Adjust Values</p>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Manual Bonus" error={errors.manualBonus?.message}>
-                  <Input
-                    {...register('manualBonus')}
-                    type="number" min="0"
-                    placeholder={String(payroll.manualBonus ?? 0)}
-                    error={!!errors.manualBonus?.message}
-                    disabled={anyPending}
-                  />
-                </FormField>
-                <FormField label="Deductions" error={errors.deductions?.message}>
-                  <Input
-                    {...register('deductions')}
-                    type="number" min="0"
-                    placeholder={String(payroll.deductions ?? 0)}
-                    error={!!errors.deductions?.message}
-                    disabled={anyPending}
-                  />
-                </FormField>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAdjust(false)}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-input hover:bg-muted transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={anyPending}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-60"
-                >
-                  {adjustMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
-                  Apply Adjustment
-                </button>
-              </div>
+          {/* Header: period + status */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-bold text-foreground">
+                {formatPeriod(payroll.period)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {payroll.salaryType === 'monthly' ? 'Monthly' : 'Daily'} — {payroll.workingDays} working days
+              </p>
             </div>
-          </form>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
-
-          {/* Left: secondary actions */}
-          <div className="flex items-center gap-2">
-            {/* Adjust — draft or approved only */}
-            {!isPaid && !showAdjust && (
-              <button
-                onClick={() => setShowAdjust(true)}
-                disabled={anyPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                Adjust
-              </button>
-            )}
-
-            {/* Reject — approved only */}
-            {isApproved && (
-              <button
-                onClick={handleReject}
-                disabled={anyPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-input text-muted-foreground hover:text-destructive hover:border-destructive transition-colors disabled:opacity-50"
-              >
-                {rejectMutation.isPending
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <RotateCcw className="w-3.5 h-3.5" />
-                }
-                Revert to Draft
-              </button>
-            )}
+            <PayrollStatusBadge status={payroll.status} />
           </div>
 
-          {/* Right: primary actions */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors"
-            >
-              Close
-            </button>
+          {/* Employee / Outlet info */}
+          <div className="bg-muted/40 rounded-lg px-1">
+            <InfoRow icon={User}     label="Employee" value={payroll.employeeId?.name ?? payroll.employeeId ?? '—'} />
+            <InfoRow icon={Building2} label="Outlet"  value={payroll.outletId?.name  ?? payroll.outletId  ?? '—'} />
+            <InfoRow icon={Calendar} label="Base Salary" value={formatIDR(payroll.baseSalary)} />
+          </div>
 
-            {/* Approve — draft only */}
-            {isDraft && (
-              <button
-                onClick={handleApprove}
-                disabled={anyPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-60"
-              >
-                {approveMutation.isPending
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <CheckCircle2 className="w-3.5 h-3.5" />
-                }
-                Approve
-              </button>
-            )}
+          {/* Attendance summary */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Attendance
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Present', value: payroll.presentDays, color: 'text-brand-600' },
+                { label: 'Absent',  value: payroll.absentDays,  color: 'text-destructive' },
+                { label: 'Cups',    value: payroll.totalCupsSold, color: 'text-amber-600' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-muted/50 rounded-lg p-2.5 text-center">
+                  <p className={cn('text-xl font-bold', color)}>{value ?? 0}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-            {/* Mark Paid — approved only */}
-            {isApproved && (
+          {/* Calculation breakdown */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Calculation
+            </p>
+            <div className="bg-muted/30 rounded-lg px-3 py-1">
+              <CalcRow label="Salary Earned"  value={formatIDR(payroll.salaryEarned)} />
+              <CalcRow label="Commission"     value={`+ ${formatIDR(payroll.commission)}`}              positive={payroll.commission > 0} />
+              <CalcRow label="Cups Bonus"     value={`+ ${formatIDR(payroll.cupsBonus)}`}    positive />
+              <CalcRow label="Meal Allowance" value={`+ ${formatIDR(payroll.mealAllowanceTotal)}`}       positive={payroll.mealAllowanceTotal > 0} />
+              <CalcRow label="Daily Tier Bonus"        value={`+ ${formatIDR(payroll.dailyTierBonus)}`}          positive={payroll.dailyTierBonus > 0} />
+              <CalcRow label="Weekly Attendance Bonus" value={`+ ${formatIDR(payroll.weeklyAttendanceBonus)}`}   positive={payroll.weeklyAttendanceBonus > 0} />
+              <CalcRow label="Manual Bonus"   value={`+ ${formatIDR(payroll.manualBonus)}`}  positive={payroll.manualBonus > 0} muted={!payroll.manualBonus} />
+              <CalcRow label="Deductions"     value={`− ${formatIDR(payroll.deductions)}`}   negative={payroll.deductions > 0} muted={!payroll.deductions} />
+              <CalcRow label="Kasbon"         value={`− ${formatIDR(payroll.kasbon)}`}       negative={payroll.kasbon > 0} muted={!payroll.kasbon} />
+              <CalcRow label="Total Pay"      value={formatIDR(payroll.totalPay)} bold />
+            </div>
+          </div>
+
+          {/* Adjust form — only for draft/approved */}
+          {!isPaid && showAdjust && (
+            <form onSubmit={handleSubmit(onAdjustSubmit)} noValidate>
+              <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-3">
+                <p className="text-xs font-semibold text-foreground">Adjust Values</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField label="Manual Bonus" error={errors.manualBonus?.message}>
+                    <Input
+                      {...register('manualBonus')}
+                      type="number" min="0"
+                      placeholder={String(payroll.manualBonus ?? 0)}
+                      error={!!errors.manualBonus?.message}
+                      disabled={anyPending}
+                    />
+                  </FormField>
+                  <FormField label="Deductions" error={errors.deductions?.message}>
+                    <Input
+                      {...register('deductions')}
+                      type="number" min="0"
+                      placeholder={String(payroll.deductions ?? 0)}
+                      error={!!errors.deductions?.message}
+                      disabled={anyPending}
+                    />
+                  </FormField>
+                  <FormField label="Kasbon" error={errors.kasbon?.message}>
+                    <Input
+                      {...register('kasbon')}
+                      type="number" min="0"
+                      placeholder={String(payroll.kasbon ?? 0)}
+                      error={!!errors.kasbon?.message}
+                      disabled={anyPending}
+                    />
+                  </FormField>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdjust(false)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-md border border-input hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={anyPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-60"
+                  >
+                    {adjustMutation.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                    Apply Adjustment
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+
+        </div>
+        <div className="pt-3 border-t border-border">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
+
+            {/* Left: secondary actions */}
+            <div className="flex items-center gap-2">
+              {/* Adjust — draft or approved only */}
+              {!isPaid && !showAdjust && (
+                <button
+                  onClick={() => setShowAdjust(true)}
+                  disabled={anyPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  Adjust
+                </button>
+              )}
+
+              {/* Reject — approved only */}
+              {isApproved && (
+                <button
+                  onClick={handleReject}
+                  disabled={anyPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-input text-muted-foreground hover:text-destructive hover:border-destructive transition-colors disabled:opacity-50"
+                >
+                  {rejectMutation.isPending
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <RotateCcw className="w-3.5 h-3.5" />
+                  }
+                  Revert to Draft
+                </button>
+              )}
+            </div>
+
+            {/* Right: primary actions */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleMarkPaid}
-                disabled={anyPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md bg-emerald-500 hover:bg-emerald-600 text-white transition-colors disabled:opacity-60"
+                onClick={onClose}
+                className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors"
               >
-                {paidMutation.isPending
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Banknote className="w-3.5 h-3.5" />
-                }
-                Mark as Paid
+                Close
               </button>
-            )}
+
+              {/* Approve — draft only */}
+              {isDraft && (
+                <button
+                  onClick={handleApprove}
+                  disabled={anyPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-60"
+                >
+                  {approveMutation.isPending
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <CheckCircle2 className="w-3.5 h-3.5" />
+                  }
+                  Approve
+                </button>
+              )}
+
+              {/* Mark Paid — approved only */}
+              {isApproved && (
+                <button
+                  onClick={handleMarkPaid}
+                  disabled={anyPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md bg-emerald-500 hover:bg-emerald-600 text-white transition-colors disabled:opacity-60"
+                >
+                  {paidMutation.isPending
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Banknote className="w-3.5 h-3.5" />
+                  }
+                  Mark as Paid
+                </button>
+              )}
+            </div>
           </div>
         </div>
-
       </div>
     </Modal>
   )

@@ -20,6 +20,8 @@ import {
   Receipt,
   Banknote,
   Store,
+  Package,
+  Beaker,
   Settings,
   ChevronLeft,
   Coffee,
@@ -33,6 +35,8 @@ const NAV_ITEMS = [
   { path: '/expenses',   label: 'Expenses',   icon: Receipt },
   { path: '/payroll',    label: 'Payroll',    icon: Banknote },
   { path: '/outlets',    label: 'Outlets',    icon: Store },
+  { path: '/products',   label: 'Products',   icon: Package },
+  { path: '/raw-materials', label: 'Raw Materials', icon: Beaker },
   { path: '/settings',   label: 'Settings',   icon: Settings },
 ]
 

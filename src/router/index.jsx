@@ -12,6 +12,8 @@
 //     /expenses        → DashboardLayout → (future)
 //     /payroll         → DashboardLayout → (future)
 //     /outlets         → DashboardLayout → (future)
+//     /products        → DashboardLayout → ProductsPage
+//     /raw-materials   → DashboardLayout → RawMaterialsPage
 //     /settings        → DashboardLayout → (future)
 //   *                  → NotFoundPage
 //
@@ -33,6 +35,9 @@ import AttendancePage from '../pages/AttendancePage'
 import SalesPage from '../pages/SalesPage'
 import ExpensesPage from '../pages/ExpensesPage'
 import PayrollPage from '../pages/PayrollPage'
+import OutletsPage from '../pages/OutletsPage'
+import ProductsPage from '../pages/ProductsPage'
+import RawMaterialsPage from '../pages/RawMaterialsPage'
 
 const router = createBrowserRouter([
   // ── Public: Auth ────────────────────────────────────────
@@ -62,7 +67,9 @@ const router = createBrowserRouter([
           { path: '/sales',      element: <SalesPage/> },
           { path: '/expenses',   element: <ExpensesPage/> },
           { path: '/payroll',    element: <PayrollPage/> },
-          { path: '/outlets',    element: <PlaceholderPage title="Outlets" /> },
+          { path: '/outlets',    element: <OutletsPage/> },
+          { path: '/products',   element: <ProductsPage/> },
+          { path: '/raw-materials', element: <RawMaterialsPage/> },
           { path: '/settings',   element: <PlaceholderPage title="Settings" /> },
         ],
       },

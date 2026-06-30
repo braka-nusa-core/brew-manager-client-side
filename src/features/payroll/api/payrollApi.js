@@ -5,7 +5,7 @@
 //   POST   /payroll/generate          → body: { outletId, month, year, workingDays }
 //   GET    /payroll                   → query: { page, limit, outletId, month, year, status, employeeId }
 //   GET    /payroll/:id               → single record
-//   PATCH  /payroll/:id/adjust        → body: { manualBonus?, deductions? }
+//   PATCH  /payroll/:id/adjust        → body: { manualBonus?, deductions?, kasbon? }
 //   PATCH  /payroll/:id/approve       → no body
 //   PATCH  /payroll/:id/reject        → no body
 //   PATCH  /payroll/:id/paid          → no body
@@ -13,12 +13,13 @@
 // Status machine: draft → approved → paid
 //                 approved → draft (reject)
 //
-// Payroll fields (snapshot — all from model):
+// Payroll fields (snapshot — all from model, v2.0 engine):
 //   tenantId, outletId, employeeId, period: { month, year }
-//   salaryType, baseSalary (snapshot)
-//   workingDays, presentDays, absentDays
-//   totalCupsSold, cupsBonus
-//   manualBonus, deductions
+//   payrollType, salaryType, baseSalary (snapshot), commission
+//   workingDays, presentDays, absentDays, totalCupsSold
+//   cupsBonus (legacy, mostly 0 under v2.0), mealAllowanceTotal,
+//   dailyTierBonus, weeklyAttendanceBonus
+//   manualBonus, deductions, kasbon
 //   salaryEarned, totalPay
 //   status, generatedBy, approvedBy, generatedAt, approvedAt
 
@@ -54,11 +55,11 @@ export const getPayroll = async (payrollId) => {
 }
 
 /**
- * Adjust manualBonus and/or deductions on a draft/approved payroll.
+ * Adjust manualBonus, deductions, and/or kasbon on a draft/approved payroll.
  * Backend recalculates totalPay after adjustment.
  * Cannot adjust paid payrolls.
  * @param {string} payrollId
- * @param {{ manualBonus?: number, deductions?: number }} payload
+ * @param {{ manualBonus?: number, deductions?: number, kasbon?: number }} payload
  */
 export const adjustPayroll = async (payrollId, payload) => {
   const { data } = await apiClient.patch(`/payroll/${payrollId}/adjust`, payload)

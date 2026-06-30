@@ -9,6 +9,17 @@ import { useToggleEmployeeActive }   from '../hooks/useEmployees'
 import useToast                      from '@/hooks/useToast'
 import { cn }                        from '@/lib/utils'
 
+// Employee type badge config — labels mirror EMPLOYEE_TYPES (imported from
+// EmployeeFormModal, the single source of truth shared with the form).
+// Rider gets a distinct color since it's operationally significant
+// (riders are the only employees eligible for Cup Record assignment).
+const EMPLOYEE_TYPE_BADGE = {
+  barista:    { label: 'Barista',    className: 'bg-blue-50 text-blue-600' },
+  cashier:    { label: 'Cashier',    className: 'bg-violet-50 text-violet-600' },
+  supervisor: { label: 'Supervisor', className: 'bg-amber-50 text-amber-600' },
+  rider:      { label: 'Rider',      className: 'bg-emerald-50 text-emerald-600' },
+}
+
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
@@ -114,6 +125,7 @@ const EmployeeTable = ({ employees }) => {
           <DataTable.HeadRow>
             <DataTable.HeadCell>Employee</DataTable.HeadCell>
             <DataTable.HeadCell>Position</DataTable.HeadCell>
+            <DataTable.HeadCell>Type</DataTable.HeadCell>
             <DataTable.HeadCell>Salary Type</DataTable.HeadCell>
             <DataTable.HeadCell>Base Salary</DataTable.HeadCell>
             <DataTable.HeadCell>Join Date</DataTable.HeadCell>
@@ -137,6 +149,20 @@ const EmployeeTable = ({ employees }) => {
 
               <DataTable.Cell>
                 <span className="capitalize text-sm">{emp.position}</span>
+              </DataTable.Cell>
+
+              <DataTable.Cell>
+                {(() => {
+                  const typeBadge = EMPLOYEE_TYPE_BADGE[emp.employeeType] ?? EMPLOYEE_TYPE_BADGE.barista
+                  return (
+                    <span className={cn(
+                      'inline-block text-xs px-2 py-0.5 rounded-md font-medium',
+                      typeBadge.className
+                    )}>
+                      {typeBadge.label}
+                    </span>
+                  )
+                })()}
               </DataTable.Cell>
 
               <DataTable.Cell>

@@ -12,7 +12,7 @@
 
 import { useState, useMemo }          from 'react'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip,
+  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
 import {
@@ -89,16 +89,15 @@ const ChartTooltip = ({ active, payload, label }) => {
 // ─── Main Area Chart — Revenue vs Expense ─────────────────────
 
 const TrendChart = ({ salesData, expData, isLoading }) => {
-  if (isLoading) return <Sk className="w-full" style={{ height: 220 }} />
+  if (isLoading) return <Sk className="w-full rounded-2xl" style={{ height: 300 }} />
 
-  // Merge both series by date into one data array for Recharts
   const allDates = [...new Set([
     ...(salesData ?? []).map(d => d.date),
     ...(expData   ?? []).map(d => d.date),
   ])].sort()
 
   if (!allDates.length) return (
-    <div className="flex items-center justify-center text-sm text-zinc-400" style={{ height: 220 }}>
+    <div className="flex items-center justify-center text-sm text-zinc-400" style={{ height: 300 }}>
       No data available for this period
     </div>
   )
@@ -109,53 +108,63 @@ const TrendChart = ({ salesData, expData, isLoading }) => {
     Expense: expData?.find(d => d.date === date)?.totalExpense   ?? 0,
   }))
 
+  // Max 8 X-axis labels regardless of data density
+  const tickInterval = Math.max(0, Math.ceil(merged.length / 8) - 1)
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={merged} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={300}>
+      <AreaChart data={merged} margin={{ top: 12, right: 8, left: -4, bottom: 0 }}>
         <defs>
           <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#84cc16" stopOpacity={0.20} />
-            <stop offset="95%" stopColor="#84cc16" stopOpacity={0}    />
+            <stop offset="0%"   stopColor="#84cc16" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="#84cc16" stopOpacity={0.03} />
           </linearGradient>
           <linearGradient id="gradExpense" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor="#f43f5e" stopOpacity={0.20} />
-            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}    />
+            <stop offset="0%"   stopColor="#f43f5e" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.03} />
           </linearGradient>
         </defs>
+
+        {/* Horizontal-only grid, very subtle */}
+        <CartesianGrid
+          horizontal vertical={false}
+          stroke="#f0f0f0" strokeWidth={1}
+        />
 
         <XAxis
           dataKey="date"
           tick={{ fontSize: 11, fill: '#a1a1aa' }}
           tickLine={false}
           axisLine={false}
-          interval="preserveStartEnd"
+          interval={tickInterval}
+          dy={6}
         />
         <YAxis
           tickFormatter={fmtShort}
           tick={{ fontSize: 11, fill: '#a1a1aa' }}
           tickLine={false}
           axisLine={false}
-          width={64}
+          width={56}
+          tickCount={5}
         />
-        <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#e4e4e7', strokeWidth: 1.5, strokeDasharray: '4 4' }} />
+        <Tooltip
+          content={<ChartTooltip />}
+          cursor={{ stroke: '#d4d4d8', strokeWidth: 1, strokeDasharray: '4 3' }}
+        />
 
         <Area
-          type="monotone"
-          dataKey="Revenue"
-          stroke="#84cc16"
-          strokeWidth={2.5}
-          fill="url(#gradRevenue)"
-          dot={false}
-          activeDot={{ r: 5, fill: 'white', stroke: '#84cc16', strokeWidth: 2.5 }}
+          type="monotone" dataKey="Revenue"
+          stroke="#84cc16" strokeWidth={2.8}
+          fill="url(#gradRevenue)" dot={false}
+          activeDot={{ r: 5.5, fill: '#fff', stroke: '#84cc16', strokeWidth: 2.5 }}
+          animationDuration={900} animationEasing="ease-out"
         />
         <Area
-          type="monotone"
-          dataKey="Expense"
-          stroke="#f43f5e"
-          strokeWidth={2.5}
-          fill="url(#gradExpense)"
-          dot={false}
-          activeDot={{ r: 5, fill: 'white', stroke: '#f43f5e', strokeWidth: 2.5 }}
+          type="monotone" dataKey="Expense"
+          stroke="#f43f5e" strokeWidth={2.8}
+          fill="url(#gradExpense)" dot={false}
+          activeDot={{ r: 5.5, fill: '#fff', stroke: '#f43f5e', strokeWidth: 2.5 }}
+          animationDuration={900} animationEasing="ease-out"
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -344,30 +353,185 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'brand', trend, trend
 
 // ─── Employee Leaderboard ─────────────────────────────────────
 
-const MEDAL    = ['🥇', '🥈', '🥉']
-const AV_COLORS = [
+// Top-3 spotlight card config
+const PODIUM = [
+  {
+    gradBg:     'bg-gradient-to-br from-amber-50  to-yellow-50',
+    border:     'border-amber-200/60',
+    avatarBg:   'bg-gradient-to-br from-amber-400  to-yellow-300',
+    avatarText: 'text-white',
+    badge:      'bg-amber-100 text-amber-700',
+    bar:        'linear-gradient(90deg,#f59e0b,#fbbf24)',
+    crown:      '👑',
+    rank:       '1st',
+  },
+  {
+    gradBg:     'bg-gradient-to-br from-slate-50   to-zinc-50',
+    border:     'border-slate-200/60',
+    avatarBg:   'bg-gradient-to-br from-slate-400  to-zinc-300',
+    avatarText: 'text-white',
+    badge:      'bg-slate-100 text-slate-600',
+    bar:        'linear-gradient(90deg,#64748b,#94a3b8)',
+    crown:      '🥈',
+    rank:       '2nd',
+  },
+  {
+    gradBg:     'bg-gradient-to-br from-orange-50  to-amber-50',
+    border:     'border-orange-200/60',
+    avatarBg:   'bg-gradient-to-br from-orange-400 to-amber-300',
+    avatarText: 'text-white',
+    badge:      'bg-orange-100 text-orange-700',
+    bar:        'linear-gradient(90deg,#f97316,#fb923c)',
+    crown:      '🥉',
+    rank:       '3rd',
+  },
+]
+
+const AV_REST = [
   'bg-lime-100    text-lime-700',
   'bg-blue-100    text-blue-700',
   'bg-violet-100  text-violet-700',
   'bg-rose-100    text-rose-700',
-  'bg-amber-100   text-amber-700',
   'bg-emerald-100 text-emerald-700',
 ]
+
+// Podium card — big featured card for top 3
+const PodiumCard = ({ emp, idx, maxRev }) => {
+  const p   = PODIUM[idx]
+  const pct = Math.round((emp.totalRevenue / maxRev) * 100)
+
+  return (
+    <div className={cn(
+      'relative rounded-2xl border p-5 flex flex-col gap-3 transition-all duration-300',
+      'hover:shadow-md hover:-translate-y-0.5',
+      p.gradBg, p.border
+    )}>
+      {/* Crown badge top-right */}
+      <span className="absolute top-3.5 right-4 text-xl leading-none">{p.crown}</span>
+
+      {/* Avatar + rank */}
+      <div className="flex items-center gap-3">
+        <div className={cn(
+          'w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-sm',
+          p.avatarBg, p.avatarText
+        )}>
+          {getInitials(emp.employeeName)}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-zinc-900 truncate pr-6">{emp.employeeName}</p>
+          <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-md', p.badge)}>
+            {p.rank} Place
+          </span>
+        </div>
+      </div>
+
+      {/* Revenue — big number */}
+      <div>
+        <p className="text-[11px] text-zinc-400 font-medium mb-0.5">Revenue</p>
+        <p className="text-xl font-bold text-zinc-900 tabular-nums tracking-tight">
+          {fmtShort(emp.totalRevenue)}
+        </p>
+      </div>
+
+      {/* Stats row */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 bg-white/70 rounded-lg px-2 py-1">
+          <Coffee size={11} className="text-zinc-400" />
+          <span className="text-[11px] font-semibold text-zinc-700 tabular-nums">
+            {emp.totalCups} cups
+          </span>
+        </div>
+        <div className="flex items-center gap-1 bg-white/70 rounded-lg px-2 py-1">
+          <Activity size={11} className="text-zinc-400" />
+          <span className="text-[11px] font-semibold text-zinc-700 tabular-nums">
+            {emp.attendancePresent + (emp.attendanceLate ?? 0)}d
+          </span>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-zinc-400">vs top performer</span>
+          <span className="text-[10px] font-semibold text-zinc-600">{pct}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-white/60 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${pct}%`, background: p.bar }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Rest row — compact row for rank 4+
+const RestRow = ({ emp, idx, maxRev }) => {
+  const pct = Math.round((emp.totalRevenue / maxRev) * 100)
+  const av  = AV_REST[(idx - 3) % AV_REST.length]
+
+  return (
+    <div className="flex items-center gap-3 group py-2.5 px-3 rounded-xl hover:bg-zinc-50 transition-colors">
+      {/* Rank */}
+      <span className="w-5 text-xs text-zinc-300 tabular-nums font-semibold text-right shrink-0">
+        {idx + 1}
+      </span>
+
+      {/* Avatar */}
+      <div className={cn(
+        'w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-bold shrink-0',
+        'transition-transform group-hover:scale-110', av
+      )}>
+        {getInitials(emp.employeeName)}
+      </div>
+
+      {/* Name + bar */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-medium text-zinc-700 truncate">{emp.employeeName}</span>
+          <div className="flex items-center gap-3 shrink-0 ml-2">
+            <div className="flex items-center gap-1 text-[11px] text-zinc-400">
+              <Coffee size={10} />
+              <span className="tabular-nums">{emp.totalCups}</span>
+            </div>
+            <span className="text-sm font-bold text-zinc-700 tabular-nums w-20 text-right">
+              {fmtShort(emp.totalRevenue)}
+            </span>
+          </div>
+        </div>
+        <div className="h-1 rounded-full bg-zinc-100 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${pct}%`, backgroundColor: '#d4d4d8' }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const Leaderboard = ({ data, isLoading }) => {
   if (isLoading) return (
     <div className="space-y-4">
-      {[1,2,3,4,5].map(i => (
-        <div key={i} className="flex items-center gap-3">
-          <Sk className="w-5 h-5 shrink-0 rounded" />
-          <Sk className="w-9 h-9 rounded-xl shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Sk className="h-3.5 w-40" />
-            <Sk className="h-1.5 rounded-full w-full" />
+      {/* Top 3 skeleton — cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[1,2,3].map(i => <Sk key={i} className="h-48 w-full" />)}
+      </div>
+      {/* Rest skeleton — rows */}
+      <div className="space-y-2 mt-2">
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+            <Sk className="w-5 h-3 shrink-0" />
+            <Sk className="w-8 h-8 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Sk className="h-3.5 w-36" />
+              <Sk className="h-1 w-full rounded-full" />
+            </div>
+            <Sk className="h-3.5 w-16 shrink-0" />
           </div>
-          <Sk className="h-3.5 w-20 shrink-0" />
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 
@@ -378,65 +542,32 @@ const Leaderboard = ({ data, isLoading }) => {
     </div>
   )
 
-  const maxRev = Math.max(...data.map(e => e.totalRevenue), 1)
+  const maxRev  = Math.max(...data.map(e => e.totalRevenue), 1)
+  const top3    = data.slice(0, 3)
+  const rest    = data.slice(3, 10)
 
   return (
     <div className="space-y-4">
-      {data.slice(0, 8).map((emp, idx) => (
-        <div key={emp.employeeId} className="flex items-center gap-3 group">
+      {/* Podium — top 3 featured cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {top3.map((emp, idx) => (
+          <PodiumCard key={emp.employeeId} emp={emp} idx={idx} maxRev={maxRev} />
+        ))}
+      </div>
 
-          {/* Medal / rank */}
-          <div className="w-6 text-center shrink-0">
-            {idx < 3
-              ? <span className="text-base">{MEDAL[idx]}</span>
-              : <span className="text-xs text-zinc-300 tabular-nums font-medium">{idx+1}</span>
-            }
+      {/* Rest — compact rows */}
+      {rest.length > 0 && (
+        <div className="border-t border-zinc-100 pt-3">
+          <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide px-3 mb-1">
+            Others
+          </p>
+          <div className="divide-y divide-zinc-50">
+            {rest.map((emp, idx) => (
+              <RestRow key={emp.employeeId} emp={emp} idx={idx + 3} maxRev={maxRev} />
+            ))}
           </div>
-
-          {/* Avatar */}
-          <div className={cn(
-            'w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold shrink-0',
-            'transition-transform group-hover:scale-110',
-            AV_COLORS[idx % AV_COLORS.length]
-          )}>
-            {getInitials(emp.employeeName)}
-          </div>
-
-          {/* Name + progress bar */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-sm font-semibold text-zinc-800 truncate">
-                {emp.employeeName}
-              </span>
-              <div className="flex items-center gap-1 text-[11px] text-zinc-400 shrink-0 ml-2">
-                <Coffee size={10} />
-                <span className="tabular-nums">{emp.totalCups}</span>
-              </div>
-            </div>
-            <div className="h-1.5 rounded-full bg-zinc-100 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700 delay-75"
-                style={{
-                  width: `${(emp.totalRevenue / maxRev) * 100}%`,
-                  background:
-                    idx === 0 ? 'linear-gradient(90deg,#84cc16,#a3e635)' :
-                    idx === 1 ? 'linear-gradient(90deg,#3b82f6,#60a5fa)' :
-                    idx === 2 ? 'linear-gradient(90deg,#f97316,#fb923c)' :
-                    '#d4d4d8',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Revenue */}
-          <span className={cn(
-            'text-sm font-bold tabular-nums shrink-0 w-24 text-right',
-            idx === 0 ? 'text-lime-600' : 'text-zinc-700'
-          )}>
-            {fmtShort(emp.totalRevenue)}
-          </span>
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -632,8 +763,8 @@ const DashboardPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Main area chart — 2 cols */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-5">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-zinc-100 shadow-sm pt-5 px-5 pb-3">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-semibold text-zinc-900">Revenue vs Expenses</h3>
               <p className="text-xs text-zinc-400 mt-0.5">
@@ -665,17 +796,19 @@ const DashboardPage = () => {
       </div>
 
       {/* ── Leaderboard ───────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-base font-semibold text-zinc-900">Top Performers</h3>
             <p className="text-xs text-zinc-400 mt-0.5">
               Ranked by revenue · last {RANGES[rangeIdx].days} days
             </p>
           </div>
-          <div className="flex items-center gap-1.5 bg-zinc-50 rounded-xl px-3 py-1.5">
-            <Coffee size={12} className="text-zinc-400" />
-            <span className="text-xs text-zinc-400 font-medium">Cups sold shown</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-zinc-50 rounded-xl px-3 py-1.5">
+              <Coffee size={12} className="text-zinc-400" />
+              <span className="text-xs text-zinc-500 font-medium">Cups · Days shown</span>
+            </div>
           </div>
         </div>
         <Leaderboard data={perf} isLoading={lPerf} />

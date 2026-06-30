@@ -1,36 +1,29 @@
 // src/features/attendance/components/BulkAttendanceModal.jsx
-// Bulk attendance input for one date across multiple employees.
+// Bulk attendance input — redesigned for usability.
 //
-// Backend shape: POST /attendance/bulk
-//   { date: "YYYY-MM-DD", attendances: [{ employeeId, status, notes? }] }
-//
-// Response: { successCount, failedCount, failedItems: [{ employeeId, reason }] }
-//
-// Change log:
-//   • Per-row employeeId: raw ObjectId <Input> → <AsyncSearchSelect> backed by useEmployees().
-//   • Each row maintains its own search state via a rowSearches[] array in useState.
-//   • RHF field value (attendances[i].employeeId) remains a plain _id string — unchanged for Zod
-//     and the backend payload.
-//   • The "failed entries" summary still shows the _id (unchanged — backend returns _id in failedItems).
+// v2 layout change:
+//   Before: cramped single horizontal row (selector + status + notes + delete)
+//   After:  card per employee entry — employee selector full width on top,
+//           status + notes side by side below, delete button in card corner.
+//   This gives the AsyncSearchSelect enough room to be usable.
 
-import { useState }                    from 'react'
+import { useState }                          from 'react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
-import { zodResolver }                 from '@hookform/resolvers/zod'
-import { z }                           from 'zod'
-import { Loader2, Plus, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { zodResolver }                        from '@hookform/resolvers/zod'
+import { z }                                  from 'zod'
+import { Loader2, Trash2, AlertTriangle, CheckCircle2, UserPlus } from 'lucide-react'
 
-import Modal                           from '@/components/shared/Modal'
-import FormField, { Input, Select }    from '@/components/shared/FormField'
-import AsyncSearchSelect               from '@/components/shared/AsyncSearchSelect'
-import { useBulkCreateAttendance }     from '../hooks/useAttendance'
-import { ATTENDANCE_STATUSES }         from './AttendanceStatusBadge'
-import { useEmployees }                from '@/features/employee/hooks/useEmployees'
-import useDebounce                     from '@/hooks/useDebounce'
-import useToast                        from '@/hooks/useToast'
-import { cn }                          from '@/lib/utils'
+import Modal                                  from '@/components/shared/Modal'
+import FormField, { Input, Select }           from '@/components/shared/FormField'
+import AsyncSearchSelect                      from '@/components/shared/AsyncSearchSelect'
+import { useBulkCreateAttendance }            from '../hooks/useAttendance'
+import { ATTENDANCE_STATUSES }                from './AttendanceStatusBadge'
+import { useEmployees }                       from '@/features/employee/hooks/useEmployees'
+import useDebounce                            from '@/hooks/useDebounce'
+import useToast                               from '@/hooks/useToast'
+import { cn }                                 from '@/lib/utils'
 
-// ── Zod schema ────────────────────────────────────────────────
-// Unchanged — employeeId is still a 24-char ObjectId string.
+// ── Zod schema ─────────────────────────────────────────────────
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i
 
@@ -38,10 +31,8 @@ const bulkSchema = z.object({
   date: z.string().min(1, 'Date is required'),
   attendances: z.array(
     z.object({
-      employeeId: z
-        .string()
-        .regex(OBJECT_ID_RE, 'Select an employee'),
-      status: z.enum(['present', 'absent', 'late', 'leave', 'holiday'], {
+      employeeId: z.string().regex(OBJECT_ID_RE, 'Select an employee'),
+      status:     z.enum(['present', 'absent', 'late', 'leave', 'holiday'], {
         required_error: 'Status required',
       }),
       notes: z.string().max(200).optional().or(z.literal('')),
@@ -49,36 +40,35 @@ const bulkSchema = z.object({
   ).min(1, 'Add at least one employee entry'),
 })
 
-// ── Result Summary ────────────────────────────────────────────
+// ── Status config ──────────────────────────────────────────────
+
+const STATUS_CONFIG = {
+  present: { label: 'Present',  color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  late:    { label: 'Late',     color: 'bg-amber-100   text-amber-700   border-amber-200'   },
+  absent:  { label: 'Absent',   color: 'bg-red-100     text-red-700     border-red-200'     },
+  leave:   { label: 'On Leave', color: 'bg-blue-100    text-blue-700    border-blue-200'    },
+  holiday: { label: 'Holiday',  color: 'bg-violet-100  text-violet-700  border-violet-200'  },
+}
+
+// ── Result Summary ──────────────────────────────────────────────
 
 const BulkResultSummary = ({ result, onClose }) => (
   <div className="space-y-4">
     <div className="grid grid-cols-2 gap-3">
-      <div className="flex items-center gap-3 p-3 rounded-lg bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900">
-        <CheckCircle2 className="w-5 h-5 text-brand-500 shrink-0" />
+      <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
         <div>
-          <p className="text-xl font-bold text-brand-700 dark:text-brand-400">
-            {result.successCount}
-          </p>
-          <p className="text-xs text-brand-600 dark:text-brand-500">Inserted</p>
+          <p className="text-2xl font-bold text-emerald-700">{result.successCount}</p>
+          <p className="text-xs text-emerald-600">Records inserted</p>
         </div>
       </div>
-
       <div className={cn(
-        'flex items-center gap-3 p-3 rounded-lg border',
-        result.failedCount > 0
-          ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900'
-          : 'bg-muted border-border'
+        'flex items-center gap-3 p-4 rounded-xl border',
+        result.failedCount > 0 ? 'bg-red-50 border-red-100' : 'bg-zinc-50 border-zinc-100'
       )}>
-        <AlertTriangle className={cn(
-          'w-5 h-5 shrink-0',
-          result.failedCount > 0 ? 'text-destructive' : 'text-muted-foreground'
-        )} />
+        <AlertTriangle className={cn('w-5 h-5 shrink-0', result.failedCount > 0 ? 'text-red-500' : 'text-zinc-400')} />
         <div>
-          <p className={cn(
-            'text-xl font-bold',
-            result.failedCount > 0 ? 'text-destructive' : 'text-muted-foreground'
-          )}>
+          <p className={cn('text-2xl font-bold', result.failedCount > 0 ? 'text-red-700' : 'text-zinc-400')}>
             {result.failedCount}
           </p>
           <p className="text-xs text-muted-foreground">Failed / Skipped</p>
@@ -88,18 +78,11 @@ const BulkResultSummary = ({ result, onClose }) => (
 
     {result.failedItems?.length > 0 && (
       <div>
-        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-          Failed entries
-        </p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Failed entries</p>
         <div className="space-y-1.5 max-h-40 overflow-y-auto">
           {result.failedItems.map((item, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 text-xs p-2 rounded bg-muted"
-            >
-              <span className="font-mono text-muted-foreground break-all">
-                {item.employeeId}
-              </span>
+            <div key={i} className="flex items-start gap-2 text-xs p-2 rounded-lg bg-muted">
+              <span className="font-mono text-muted-foreground break-all">{item.employeeId}</span>
               <span className="text-destructive shrink-0">— {item.reason}</span>
             </div>
           ))}
@@ -110,7 +93,7 @@ const BulkResultSummary = ({ result, onClose }) => (
     <div className="flex justify-end pt-2 border-t border-border">
       <button
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium rounded-md bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors"
+        className="px-4 py-2 text-sm font-semibold rounded-lg bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors"
       >
         Done
       </button>
@@ -118,17 +101,16 @@ const BulkResultSummary = ({ result, onClose }) => (
   </div>
 )
 
-// ── Per-row employee selector ──────────────────────────────────
-// Isolated component so each row manages its own search string
-// without causing the entire field array to re-render.
+// ── Per-entry employee selector ────────────────────────────────
+// Isolated so each row has its own search state
 
-const EmployeeRowSelector = ({ control, index, error, disabled, open }) => {
-  const [search, setSearch]   = useState('')
-  const debouncedSearch       = useDebounce(search, 300)
+const EmployeeSelector = ({ control, index, error, disabled, open }) => {
+  const [search, setSearch] = useState('')
+  const debouncedSearch     = useDebounce(search, 300)
 
   const { data, isLoading } = useEmployees(
-    { search: debouncedSearch, isActive: true, limit: 15 },
-    { enabled: open },
+    { search: debouncedSearch, isActive: true, limit: 20 },
+    { enabled: open }
   )
   const employees = data?.data ?? []
 
@@ -145,7 +127,7 @@ const EmployeeRowSelector = ({ control, index, error, disabled, open }) => {
           getValue={(e) => e._id}
           onSearchChange={setSearch}
           isLoading={isLoading}
-          placeholder="Search employee…"
+          placeholder="Search and select employee…"
           error={!!error}
           disabled={disabled}
           emptyMessage={
@@ -159,11 +141,103 @@ const EmployeeRowSelector = ({ control, index, error, disabled, open }) => {
   )
 }
 
-// ── Component ─────────────────────────────────────────────────
+// ── Entry Card ─────────────────────────────────────────────────
 
-/**
- * @param {{ open: boolean, onClose: () => void }} props
- */
+const EntryCard = ({ field, index, control, register, errors, isPending, open, canRemove, onRemove, watchStatus }) => {
+  const statusCfg = STATUS_CONFIG[watchStatus] ?? STATUS_CONFIG.present
+
+  return (
+    <div className={cn(
+      'relative rounded-xl border bg-card p-4 space-y-3 transition-all',
+      errors.attendances?.[index]?.employeeId ? 'border-destructive/50' : 'border-border',
+    )}>
+      {/* Card header: entry number + status chip + delete */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">
+            {index + 1}
+          </span>
+          {/* Live status chip */}
+          <span className={cn(
+            'text-[11px] font-semibold px-2 py-0.5 rounded-full border',
+            statusCfg.color
+          )}>
+            {statusCfg.label}
+          </span>
+        </div>
+
+        {/* Delete button */}
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={!canRemove || isPending}
+          className={cn(
+            'p-1.5 rounded-lg transition-colors',
+            canRemove
+              ? 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+              : 'text-muted-foreground/20 cursor-not-allowed'
+          )}
+          title={canRemove ? 'Remove entry' : 'At least one entry required'}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Employee selector — full width */}
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+          Employee <span className="text-destructive">*</span>
+        </label>
+        <EmployeeSelector
+          control={control}
+          index={index}
+          error={errors.attendances?.[index]?.employeeId}
+          disabled={isPending}
+          open={open}
+        />
+        {errors.attendances?.[index]?.employeeId && (
+          <p className="text-[11px] text-destructive mt-1">
+            {errors.attendances[index].employeeId.message}
+          </p>
+        )}
+      </div>
+
+      {/* Status + Notes side by side */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            Status <span className="text-destructive">*</span>
+          </label>
+          <Select
+            {...register(`attendances.${index}.status`)}
+            error={!!errors.attendances?.[index]?.status}
+            disabled={isPending}
+          >
+            {ATTENDANCE_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_CONFIG[s]?.label ?? s}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            Notes <span className="text-muted-foreground/50 font-normal">(optional)</span>
+          </label>
+          <Input
+            {...register(`attendances.${index}.notes`)}
+            placeholder="e.g. Sick leave"
+            disabled={isPending}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Modal ─────────────────────────────────────────────────
+
 const BulkAttendanceModal = ({ open, onClose }) => {
   const toast        = useToast()
   const bulkMutation = useBulkCreateAttendance()
@@ -174,6 +248,7 @@ const BulkAttendanceModal = ({ open, onClose }) => {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(bulkSchema),
@@ -183,16 +258,12 @@ const BulkAttendanceModal = ({ open, onClose }) => {
     },
   })
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'attendances',
-  })
+  const { fields, append, remove } = useFieldArray({ control, name: 'attendances' })
 
-  const handleClose = () => {
-    reset()
-    setResult(null)
-    onClose()
-  }
+  // Watch all statuses to show live chip in each card
+  const watchedAttendances = watch('attendances')
+
+  const handleClose = () => { reset(); setResult(null); onClose() }
 
   const onSubmit = (data) => {
     const payload = {
@@ -206,24 +277,18 @@ const BulkAttendanceModal = ({ open, onClose }) => {
 
     bulkMutation.mutate(payload, {
       onSuccess: (res) => {
-        const resData = res.data ?? res
+        const d = res.data ?? res
         setResult({
-          successCount: resData.successCount ?? resData.inserted ?? 0,
-          failedCount:  resData.failedCount  ?? resData.duplicates?.length ?? 0,
-          failedItems:  resData.failedItems  ?? [],
+          successCount: d.successCount ?? d.inserted ?? 0,
+          failedCount:  d.failedCount  ?? d.duplicates?.length ?? 0,
+          failedItems:  d.failedItems  ?? [],
         })
-        if ((resData.successCount ?? resData.inserted ?? 0) > 0) {
-          toast.success(
-            'Bulk attendance submitted',
-            `${resData.successCount ?? resData.inserted} records inserted`
-          )
+        if ((d.successCount ?? d.inserted ?? 0) > 0) {
+          toast.success('Bulk attendance submitted', `${d.successCount ?? d.inserted} records inserted`)
         }
       },
       onError: (err) => {
-        toast.error(
-          'Bulk submission failed',
-          err?.response?.data?.message ?? 'Please check your inputs'
-        )
+        toast.error('Bulk submission failed', err?.response?.data?.message ?? 'Please check your inputs')
       },
     })
   }
@@ -242,7 +307,7 @@ const BulkAttendanceModal = ({ open, onClose }) => {
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="space-y-4">
 
-            {/* Date picker */}
+            {/* Date */}
             <FormField label="Attendance Date" error={errors.date?.message} required>
               <Input
                 {...register('date')}
@@ -254,125 +319,84 @@ const BulkAttendanceModal = ({ open, onClose }) => {
 
             {/* Employee entries */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-foreground">
-                  Employees
-                  <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                    ({fields.length} {fields.length === 1 ? 'entry' : 'entries'})
+              {/* Section header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">Employees</p>
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    {fields.length} {fields.length === 1 ? 'entry' : 'entries'}
                   </span>
-                </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => append({ employeeId: '', status: 'present', notes: '' })}
                   disabled={bulkMutation.isPending}
-                  className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors disabled:opacity-50"
+                  className={cn(
+                    'flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg',
+                    'bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add row
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Add Employee
                 </button>
               </div>
 
-              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {/* Entry cards */}
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-0.5">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2">
-
-                    {/* Employee selector */}
-                    <div className="flex-1 min-w-0">
-                      <EmployeeRowSelector
-                        open={open}
-                        control={control}
-                        index={index}
-                        error={errors.attendances?.[index]?.employeeId}
-                        disabled={bulkMutation.isPending}
-                      />
-                      {errors.attendances?.[index]?.employeeId && (
-                        <p className="text-[10px] text-destructive mt-0.5">
-                          {errors.attendances[index].employeeId.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Status */}
-                    <div className="w-32 shrink-0">
-                      <Select
-                        {...register(`attendances.${index}.status`)}
-                        error={!!errors.attendances?.[index]?.status}
-                        disabled={bulkMutation.isPending}
-                      >
-                        {ATTENDANCE_STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    {/* Notes */}
-                    <div className="w-36 shrink-0 hidden sm:block">
-                      <Input
-                        {...register(`attendances.${index}.notes`)}
-                        placeholder="Notes (opt.)"
-                        disabled={bulkMutation.isPending}
-                        className="text-xs"
-                      />
-                    </div>
-
-                    {/* Remove */}
-                    <button
-                      type="button"
-                      onClick={() => fields.length > 1 && remove(index)}
-                      disabled={fields.length <= 1 || bulkMutation.isPending}
-                      className="p-1.5 mt-0.5 rounded text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-
-                  </div>
+                  <EntryCard
+                    key={field.id}
+                    field={field}
+                    index={index}
+                    control={control}
+                    register={register}
+                    errors={errors}
+                    isPending={bulkMutation.isPending}
+                    open={open}
+                    canRemove={fields.length > 1}
+                    onRemove={() => remove(index)}
+                    watchStatus={watchedAttendances?.[index]?.status ?? 'present'}
+                  />
                 ))}
               </div>
 
-              {errors.attendances?.root && (
-                <p className="text-xs text-destructive mt-1">
-                  {errors.attendances.root.message}
-                </p>
-              )}
-              {typeof errors.attendances?.message === 'string' && (
-                <p className="text-xs text-destructive mt-1">
-                  {errors.attendances.message}
-                </p>
+              {errors.attendances?.message && (
+                <p className="text-xs text-destructive mt-2">{errors.attendances.message}</p>
               )}
             </div>
-
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={bulkMutation.isPending}
-              className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              disabled={bulkMutation.isPending}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
-                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-                'disabled:opacity-60 disabled:cursor-not-allowed'
-              )}
-            >
-              {bulkMutation.isPending && (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              )}
-              {bulkMutation.isPending
-                ? `Submitting ${fields.length} records…`
-                : `Submit ${fields.length} Record${fields.length !== 1 ? 's' : ''}`
-              }
-            </button>
+          <div className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              {fields.length} employee{fields.length !== 1 ? 's' : ''} · 1 date
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={bulkMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-input hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={bulkMutation.isPending}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg',
+                  'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                  'disabled:opacity-60 disabled:cursor-not-allowed'
+                )}
+              >
+                {bulkMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {bulkMutation.isPending
+                  ? `Submitting…`
+                  : `Submit ${fields.length} Record${fields.length !== 1 ? 's' : ''}`
+                }
+              </button>
+            </div>
           </div>
         </form>
       )}

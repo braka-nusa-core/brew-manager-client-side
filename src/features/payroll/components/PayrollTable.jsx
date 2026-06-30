@@ -8,7 +8,8 @@
 // - Responsive columns
 // - Employee avatar + resolved names
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { MoreHorizontal, CheckCircle2, Eye } from 'lucide-react'
 
 import DataTable from '@/components/shared/DataTable'
@@ -90,6 +91,8 @@ const MiniAvatar = ({ name }) => {
 
 const RowActions = ({ payroll, onView }) => {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef(null)
 
   const approveMutation = useApprovePayroll()
   const toast = useToast()
@@ -115,26 +118,39 @@ const RowActions = ({ payroll, onView }) => {
     })
   }
 
+  // Dropdown is portaled to <body> and positioned via fixed coordinates
+  // computed from the trigger's bounding rect, so it is never clipped by
+  // a table/card ancestor's overflow-hidden/auto.
+  const handleOpen = (e) => {
+    e.stopPropagation()
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setMenuPos({ top: rect.bottom + 4, left: rect.right - 176 }) // 176px = w-44
+    }
+    setOpen((o) => !o)
+  }
+
   return (
     <div className="relative flex justify-end">
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((o) => !o)
-        }}
+        ref={triggerRef}
+        onClick={handleOpen}
         className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
       >
         <MoreHorizontal className="w-4 h-4" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute right-0 top-full mt-1 w-44 z-20 bg-popover border border-border rounded-lg shadow-lg overflow-hidden animate-fade-in">
+          <div
+            style={{ top: menuPos.top, left: menuPos.left }}
+            className="fixed w-44 z-50 bg-popover border border-border rounded-lg shadow-lg overflow-hidden animate-fade-in"
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -162,7 +178,8 @@ const RowActions = ({ payroll, onView }) => {
               </>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   )

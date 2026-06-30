@@ -3,7 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { X }       from 'lucide-react'
 import { cn }      from '@/lib/utils'
 
-const Modal = ({ open, onClose, title, description, children, size = 'md', className }) => {
+const Modal = ({ open, onClose, title, description, children, footer, size = 'md', className }) => {
   const widthMap = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' }
 
   return (
@@ -14,13 +14,18 @@ const Modal = ({ open, onClose, title, description, children, size = 'md', class
           className={cn(
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50',
             'w-[calc(100%-2rem)] bg-card border border-border rounded-xl shadow-xl',
+            // Constrain to viewport height and lay out as a column so the
+            // header/footer can stay pinned while only the middle (body)
+            // section scrolls — prevents tall content (e.g. a long form)
+            // from overflowing past the viewport on desktop/laptop screens.
+            'flex flex-col max-h-[85vh]',
             'focus:outline-none',
             widthMap[size],
             className
           )}
           onInteractOutside={(e) => { e.preventDefault(); onClose() }}
         >
-          <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border">
+          <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border shrink-0">
             <div className="min-w-0">
               <Dialog.Title className="text-base font-semibold text-foreground leading-tight">
                 {title}
@@ -38,7 +43,17 @@ const Modal = ({ open, onClose, title, description, children, size = 'md', class
               <X className="w-4 h-4" />
             </Dialog.Close>
           </div>
-          <div className="px-6 py-5">{children}</div>
+
+          {/* Body — the only scrollable region. min-h-0 is required inside
+              a flex column for overflow-y-auto to actually take effect
+              instead of the column growing to fit its content. */}
+          <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">{children}</div>
+
+          {/* Footer is optional — existing callers that don't pass it are
+              unaffected (nothing renders, same as before this change). */}
+          {footer && (
+            <div className="px-6 py-4 border-t border-border shrink-0">{footer}</div>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

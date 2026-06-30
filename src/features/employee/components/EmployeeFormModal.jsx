@@ -39,31 +39,45 @@ import { cn }                                 from '@/lib/utils'
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i
 
+// ── employeeType — must mirror backend EMPLOYEE_TYPES exactly ──
+// Backend: Employee.model.js → EMPLOYEE_TYPES = ['barista','cashier','supervisor','rider']
+// isRider is derived server-side from this field — NEVER sent from the frontend.
+export const EMPLOYEE_TYPES = ['barista', 'cashier', 'supervisor', 'rider']
+
+const EMPLOYEE_TYPE_LABELS = {
+  barista:    'Barista',
+  cashier:    'Cashier',
+  supervisor: 'Supervisor',
+  rider:      'Rider',
+}
+
 // ── preprocess helper: treat empty string as undefined for optional numbers ──
 const optionalNumber = z
   .union([z.number().min(0, 'Cannot be negative'), z.literal('')])
   .optional()
 
 const createSchema = z.object({
-  outletId:   z.string().regex(OBJECT_ID_RE, 'Select a valid outlet'),
-  name:       z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
-  phone:      z.string().max(20, 'Phone too long').optional().or(z.literal('')),
-  position:   z.string().min(2, 'Position must be at least 2 characters').max(50, 'Position too long'),
-  salaryType: z.enum(['monthly', 'daily'], { required_error: 'Select a salary type' }),
+  outletId:     z.string().regex(OBJECT_ID_RE, 'Select a valid outlet'),
+  name:         z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
+  phone:        z.string().max(20, 'Phone too long').optional().or(z.literal('')),
+  position:     z.string().min(2, 'Position must be at least 2 characters').max(50, 'Position too long'),
+  employeeType: z.enum(EMPLOYEE_TYPES, { required_error: 'Select an employee type' }),
+  salaryType:   z.enum(['monthly', 'daily'], { required_error: 'Select a salary type' }),
   // RupiahInput stores integer | '' — require it to be a positive number on create
-  baseSalary: z
+  baseSalary:   z
     .number({ required_error: 'Base salary is required', invalid_type_error: 'Enter a valid amount' })
     .min(1, 'Must be greater than 0'),
-  joinDate:   z.string().min(1, 'Join date is required'),
+  joinDate:     z.string().min(1, 'Join date is required'),
 })
 
 const editSchema = z.object({
-  name:       z.string().min(2, 'At least 2 characters').max(100).optional().or(z.literal('')),
-  phone:      z.string().max(20).optional().or(z.literal('')),
-  position:   z.string().min(2, 'At least 2 characters').max(50).optional().or(z.literal('')),
-  salaryType: z.enum(['monthly', 'daily']).optional(),
-  baseSalary: optionalNumber,
-  joinDate:   z.string().optional().or(z.literal('')),
+  name:         z.string().min(2, 'At least 2 characters').max(100).optional().or(z.literal('')),
+  phone:        z.string().max(20).optional().or(z.literal('')),
+  position:     z.string().min(2, 'At least 2 characters').max(50).optional().or(z.literal('')),
+  employeeType: z.enum(EMPLOYEE_TYPES).optional(),
+  salaryType:   z.enum(['monthly', 'daily']).optional(),
+  baseSalary:   optionalNumber,
+  joinDate:     z.string().optional().or(z.literal('')),
 })
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -82,23 +96,25 @@ const cleanPayload = (data) =>
 // ── Default values ────────────────────────────────────────────
 
 const getCreateDefaults = (defaultOutletId) => ({
-  outletId:   defaultOutletId ?? '',
-  name:       '',
-  phone:      '',
-  position:   '',
-  salaryType: 'monthly',
-  baseSalary: '',   // RupiahInput treats '' as empty/cleared display
-  joinDate:   '',
+  outletId:     defaultOutletId ?? '',
+  name:         '',
+  phone:        '',
+  position:     '',
+  employeeType: 'barista',
+  salaryType:   'monthly',
+  baseSalary:   '',   // RupiahInput treats '' as empty/cleared display
+  joinDate:     '',
 })
 
 const getEditDefaults = (employee) => ({
-  name:       employee?.name       ?? '',
-  phone:      employee?.phone      ?? '',
-  position:   employee?.position   ?? '',
-  salaryType: employee?.salaryType ?? 'monthly',
+  name:         employee?.name         ?? '',
+  phone:        employee?.phone        ?? '',
+  position:     employee?.position     ?? '',
+  employeeType: employee?.employeeType ?? 'barista',
+  salaryType:   employee?.salaryType   ?? 'monthly',
   // Pass raw number so RupiahInput can format the display on open
-  baseSalary: employee?.baseSalary ?? '',
-  joinDate:   toDateInputValue(employee?.joinDate),
+  baseSalary:   employee?.baseSalary   ?? '',
+  joinDate:     toDateInputValue(employee?.joinDate),
 })
 
 // ── Component ─────────────────────────────────────────────────
@@ -223,15 +239,31 @@ const EmployeeFormModal = ({ open, onClose, employee = null, defaultOutletId }) 
             />
           </FormField>
 
-          {/* Position */}
-          <FormField label="Position" error={errors.position?.message} required={!isEdit}>
-            <Input
-              {...register('position')}
-              placeholder="e.g. Barista, Cashier, Supervisor"
-              error={!!errors.position?.message}
-              disabled={isPending}
-            />
-          </FormField>
+          {/* Position + Employee Type side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Position" error={errors.position?.message} required={!isEdit}>
+              <Input
+                {...register('position')}
+                placeholder="e.g. Barista, Cashier, Supervisor"
+                error={!!errors.position?.message}
+                disabled={isPending}
+              />
+            </FormField>
+
+            <FormField label="Employee Type" error={errors.employeeType?.message} required={!isEdit}>
+              <Select
+                {...register('employeeType')}
+                error={!!errors.employeeType?.message}
+                disabled={isPending}
+              >
+                {EMPLOYEE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {EMPLOYEE_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
 
           {/* Salary Type + Base Salary side by side */}
           <div className="grid grid-cols-2 gap-3">
