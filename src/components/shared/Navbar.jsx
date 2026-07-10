@@ -8,9 +8,11 @@
 //   - User avatar dropdown with role badge and logout
 // ============================================================
 
-import { Menu, ChevronDown, LogOut, User, Building2 } from 'lucide-react'
+import { Menu, ChevronDown, LogOut, User, Building2, Lock } from 'lucide-react'
 import { useAuthStore, selectUser }  from '@/store/authStore'
 import { useLogout }                 from '@/features/auth/hooks/useAuth'
+import NotificationBell              from '@/features/notification/components/NotificationBell'
+import ChangePasswordModal           from '@/features/auth/components/ChangePasswordModal'
 import { cn }                        from '@/lib/utils'
 import { useState }                  from 'react'
 
@@ -34,6 +36,7 @@ const Navbar = ({ onMobileMenuToggle }) => {
   const user          = useAuthStore(selectUser)
   const logoutMutation = useLogout()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [cpOpen,       setCpOpen]       = useState(false)
 
   const initials = user?.name
     ?.split(' ')
@@ -43,7 +46,8 @@ const Navbar = ({ onMobileMenuToggle }) => {
     .toUpperCase() ?? '?'
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 lg:px-6 border-b border-border bg-background shrink-0">
+    <>
+      <header className="h-16 flex items-center justify-between px-4 lg:px-6 border-b border-border bg-background shrink-0">
 
       {/* ── Left: Mobile menu toggle ──────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -63,8 +67,12 @@ const Navbar = ({ onMobileMenuToggle }) => {
         </button>
       </div>
 
-      {/* ── Right: User dropdown ──────────────────────────────── */}
-      <div className="relative">
+      {/* ── Right: Notification bell + User dropdown ─────────── */}
+      <div className="flex items-center gap-1">
+        <NotificationBell />
+
+        {/* User dropdown */}
+        <div className="relative">
         <button
           onClick={() => setDropdownOpen((o) => !o)}
           className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-muted transition-colors"
@@ -126,6 +134,14 @@ const Navbar = ({ onMobileMenuToggle }) => {
                 </button>
 
                 <button
+                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-muted transition-colors"
+                  onClick={() => { setDropdownOpen(false); setCpOpen(true) }}
+                >
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  Change Password
+                </button>
+
+                <button
                   className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                   onClick={() => {
                     setDropdownOpen(false)
@@ -141,7 +157,10 @@ const Navbar = ({ onMobileMenuToggle }) => {
           </>
         )}
       </div>
+      </div>
     </header>
+    <ChangePasswordModal open={cpOpen} onClose={() => setCpOpen(false)} />
+    </>
   )
 }
 

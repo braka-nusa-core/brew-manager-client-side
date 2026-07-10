@@ -2,7 +2,7 @@
 import { useMutation }   from '@tanstack/react-query'
 import { useNavigate }   from 'react-router-dom'
 import { useAuthStore }  from '@/store/authStore'
-import { login, logout, refreshToken } from '../api/authApi'
+import { login, logout, refreshToken, changePassword } from '../api/authApi'
 
 // ── useInitAuth ───────────────────────────────────────────────
 // Called ONCE in App.jsx on mount to rehydrate session from
@@ -66,3 +66,10 @@ export const useLogout = () => {
     },
   })
 }
+// ── useChangePassword ─────────────────────────────────────────
+// Self-service password change. Any authenticated user.
+// Backend: PATCH /auth/change-password { currentPassword, newPassword }
+// 401 = wrong current password; 400 = new === current.
+
+export const useChangePassword = () =>
+  useMutation({ mutationFn: changePassword })

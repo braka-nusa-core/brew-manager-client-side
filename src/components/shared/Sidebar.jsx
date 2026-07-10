@@ -25,6 +25,10 @@ import {
   Settings,
   ChevronLeft,
   Coffee,
+  Bike,
+  UserCheck,
+  Wrench,
+  KeyRound,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -37,7 +41,12 @@ const NAV_ITEMS = [
   { path: '/outlets',    label: 'Outlets',    icon: Store },
   { path: '/products',   label: 'Products',   icon: Package },
   { path: '/raw-materials', label: 'Raw Materials', icon: Beaker },
-  { path: '/settings',   label: 'Settings',   icon: Settings },
+  { path: '/cup-records', label: 'Cup Records',   icon: Coffee },
+  { path: '/bikes',            label: 'Bikes',             icon: Bike },
+  { path: '/bike-assignments', label: 'Bike Assignments',  icon: UserCheck },
+  { path: '/bike-maintenance', label: 'Bike Maintenance',  icon: Wrench },
+  { path: '/users',            label: 'Users',             icon: KeyRound },
+  { path: '/settings',         label: 'Settings',          icon: Settings },
 ]
 
 /**

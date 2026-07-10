@@ -30,6 +30,8 @@ import LoginPage        from '@/pages/LoginPage'
 import DashboardPage    from '@/pages/DashboardPage'
 import NotFoundPage     from '@/pages/NotFoundPage'
 import PlaceholderPage  from '@/pages/PlaceholderPage'
+import UsersPage        from '@/pages/UsersPage'
+import SettingsPage     from '@/pages/SettingsPage'
 import EmployeesPage from '../pages/EmployeesPage'
 import AttendancePage from '../pages/AttendancePage'
 import SalesPage from '../pages/SalesPage'
@@ -38,6 +40,10 @@ import PayrollPage from '../pages/PayrollPage'
 import OutletsPage from '../pages/OutletsPage'
 import ProductsPage from '../pages/ProductsPage'
 import RawMaterialsPage from '../pages/RawMaterialsPage'
+import CupRecordsPage  from '../pages/CupRecordsPage'
+import BikesPage       from '../pages/BikesPage'
+import BikeAssignmentsPage from '../pages/BikeAssignmentsPage'
+import BikeMaintenancePage from '../pages/BikeMaintenancePage'
 
 const router = createBrowserRouter([
   // ── Public: Auth ────────────────────────────────────────
@@ -70,7 +76,12 @@ const router = createBrowserRouter([
           { path: '/outlets',    element: <OutletsPage/> },
           { path: '/products',   element: <ProductsPage/> },
           { path: '/raw-materials', element: <RawMaterialsPage/> },
-          { path: '/settings',   element: <PlaceholderPage title="Settings" /> },
+          { path: '/cup-records', element: <CupRecordsPage/> },
+          { path: '/bikes',             element: <BikesPage/> },
+          { path: '/bike-assignments',  element: <BikeAssignmentsPage/> },
+          { path: '/bike-maintenance',  element: <BikeMaintenancePage/> },
+          { path: '/users',     element: <UsersPage/> },
+          { path: '/settings',  element: <SettingsPage/> },
         ],
       },
     ],

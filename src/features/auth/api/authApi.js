@@ -44,3 +44,14 @@ export const refreshToken = async () => {
   )
   return data.data  // { accessToken, user }
 }
+
+/**
+ * Self-service password change. Requires the current password for verification.
+ * Backend: PATCH /auth/change-password — authenticate only (any role).
+ * Throws 401 if currentPassword is wrong; 400 if new === current.
+ * @param {{ currentPassword: string, newPassword: string }} payload
+ */
+export const changePassword = async (payload) => {
+  const { data } = await apiClient.patch('/auth/change-password', payload)
+  return data // { success, message }
+}
