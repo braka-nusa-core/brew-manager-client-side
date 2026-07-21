@@ -15,11 +15,11 @@ const AsyncSearchSelect = ({
   getValue,
   onSearchChange,
   isLoading    = false,
-  placeholder  = 'Search…',
+  placeholder  = 'Cari…',
   error        = false,
   disabled     = false,
   className,
-  emptyMessage = 'No results found.',
+  emptyMessage = 'Tidak ada hasil ditemukan.',
 }) => {
   const [open,           setOpen]          = useState(false)
   const [query,          setQuery]         = useState('')
@@ -139,7 +139,7 @@ const AsyncSearchSelect = ({
               type="button"
               tabIndex={-1}
               onClick={clearSelection}
-              aria-label="Clear selection"
+              aria-label="Hapus pilihan"
               // ↑ bigger hit area for the clear button
               className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
@@ -174,7 +174,7 @@ const AsyncSearchSelect = ({
                 onChange={handleQueryChange}
                 onKeyDown={handleListKeyDown}
                 placeholder={placeholder}
-                aria-label="Search"
+                aria-label="Cari"
                 className={cn(
                   // ↑ h-9 search field inside dropdown (was h-8)
                   'w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-background',
@@ -197,7 +197,7 @@ const AsyncSearchSelect = ({
             {isLoading && (
               <li className="flex items-center justify-center gap-2 px-4 py-5 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Searching…
+                Mencari…
               </li>
             )}
 

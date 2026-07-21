@@ -15,7 +15,7 @@ const sizeMap = {
 const LoadingSpinner = ({ size = 'md', className }) => (
   <div
     role="status"
-    aria-label="Loading"
+    aria-label="Memuat"
     className={cn(
       'rounded-full border-muted border-t-brand-500 animate-spin',
       sizeMap[size],

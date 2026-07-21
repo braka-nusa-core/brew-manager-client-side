@@ -5,7 +5,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getOutlets,
-  getOutlet,
   createOutlet,
   updateOutlet,
   toggleOutletActive,
@@ -15,10 +14,9 @@ import {
 // ── Query key factory ─────────────────────────────────────────
 
 export const outletKeys = {
-  all:    () => ['outlets'],
-  lists:  () => ['outlets', 'list'],
-  list:   (params) => ['outlets', 'list', params],
-  detail: (id)    => ['outlets', 'detail', id],
+  all:   () => ['outlets'],
+  lists: () => ['outlets', 'list'],
+  list:  (params) => ['outlets', 'list', params],
 }
 
 // ── useOutlets — paginated list ───────────────────────────────
@@ -32,16 +30,6 @@ export const useOutlets = (params) =>
     queryFn:         () => getOutlets(params),
     placeholderData: (prev) => prev,
     staleTime:       1000 * 60 * 5, // outlets change rarely — 5min
-  })
-
-// ── useOutlet — single record ─────────────────────────────────
-
-export const useOutlet = (outletId) =>
-  useQuery({
-    queryKey:  outletKeys.detail(outletId),
-    queryFn:   () => getOutlet(outletId),
-    enabled:   !!outletId,
-    staleTime: 1000 * 60 * 10,
   })
 
 // ── useCreateOutlet ───────────────────────────────────────────
@@ -62,9 +50,8 @@ export const useUpdateOutlet = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ outletId, payload }) => updateOutlet(outletId, payload),
-    onSuccess: (_, { outletId }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: outletKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: outletKeys.detail(outletId) })
     },
   })
 }

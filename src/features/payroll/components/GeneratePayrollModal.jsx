@@ -1,13 +1,22 @@
 // src/features/payroll/components/GeneratePayrollModal.jsx
+//
+// Working Outlet architecture:
+//   There is no outlet selector in this form. Payroll is always
+//   generated for the current Working Outlet (useEffectiveOutletId()) —
+//   the same single source of truth the Navbar's Outlet Switcher writes
+//   to. If no specific Working Outlet is selected ("All Outlets"),
+//   generation is blocked entirely — there is no single outlet to
+//   generate for.
 
 import { useEffect, useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
+  TriangleAlert,
 } from 'lucide-react'
 
 import Modal from '@/components/shared/Modal'
@@ -15,23 +24,19 @@ import FormField, {
   Input,
   Select,
 } from '@/components/shared/FormField'
-import AsyncSearchSelect from '@/components/shared/AsyncSearchSelect'
 
 import { useGeneratePayroll } from '../hooks/usePayroll'
-import { useOutlets } from '@/features/outlets/hooks/useOutlets'
+import { useEffectiveOutletId } from '@/store/activeOutletStore'
 
 import useToast from '@/hooks/useToast'
-import useDebounce from '@/hooks/useDebounce'
 
 import { cn } from '@/lib/utils'
 
 // ── Zod schema ────────────────────────────────────────────────
-
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i
+//
+// outletId is intentionally NOT a field here — see file header.
 
 const schema = z.object({
-  outletId: z.string().regex(OBJECT_ID_RE, 'Select a valid outlet'),
-
   month: z.coerce
     .number()
     .min(1)
@@ -164,34 +169,15 @@ const GenerateResult = ({ result, onClose }) => (
 const GeneratePayrollModal = ({ open, onClose }) => {
   const toast = useToast()
 
+  // The single source of truth for outlet — no local outlet state, no
+  // form field, no AsyncSearchSelect. Same store the Navbar's Outlet
+  // Switcher writes to. null = "All Outlets".
+  const effectiveOutletId = useEffectiveOutletId()
+  const hasWorkingOutlet  = !!effectiveOutletId
+
   const generateMutation = useGeneratePayroll()
 
   const [result, setResult] = useState(null)
-
-  // ── Outlet search ──────────────────────────────────────────
-
-  const [outletSearch, setOutletSearch] = useState('')
-
-  const debouncedOutletSearch = useDebounce(
-    outletSearch,
-    300
-  )
-
-  const {
-    data: outletsData,
-    isLoading: outletsLoading,
-  } = useOutlets(
-    {
-      search: debouncedOutletSearch,
-      isActive: true,
-      limit: 20,
-    },
-    {
-      enabled: open,
-    }
-  )
-
-  const outlets = outletsData?.data ?? []
 
   // ── Form ───────────────────────────────────────────────────
 
@@ -199,13 +185,11 @@ const GeneratePayrollModal = ({ open, onClose }) => {
     register,
     handleSubmit,
     reset,
-    control,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
 
     defaultValues: {
-      outletId: '',
       month: currentMonth,
       year: currentYear,
       workingDays: 26,
@@ -218,14 +202,12 @@ const GeneratePayrollModal = ({ open, onClose }) => {
     if (!open) return
 
     reset({
-      outletId: '',
       month: currentMonth,
       year: currentYear,
       workingDays: 26,
     })
 
     setResult(null)
-    setOutletSearch('')
   }, [open, reset])
 
   // ── Close handler ──────────────────────────────────────────
@@ -234,7 +216,6 @@ const GeneratePayrollModal = ({ open, onClose }) => {
     reset()
 
     setResult(null)
-    setOutletSearch('')
 
     onClose()
   }
@@ -242,9 +223,14 @@ const GeneratePayrollModal = ({ open, onClose }) => {
   // ── Submit ────────────────────────────────────────────────
 
   const onSubmit = (data) => {
+    // No Working Outlet selected ("All Outlets") — not a valid context
+    // for generation. Blocked in the UI below, but guard here too in
+    // case of a stray submit.
+    if (!hasWorkingOutlet) return
+
     generateMutation.mutate(
       {
-        outletId: data.outletId,
+        outletId: effectiveOutletId,
         month: Number(data.month),
         year: Number(data.year),
         workingDays: Number(data.workingDays),
@@ -300,36 +286,14 @@ const GeneratePayrollModal = ({ open, onClose }) => {
         >
           <div className="space-y-4">
 
-            {/* Outlet selector */}
-            <FormField
-              label="Outlet"
-              error={errors.outletId?.message}
-              required
-            >
-              <Controller
-                control={control}
-                name="outletId"
-                render={({ field }) => (
-                  <AsyncSearchSelect
-                    value={field.value}
-                    onChange={field.onChange}
-                    items={outlets}
-                    getLabel={(o) => o.name}
-                    getValue={(o) => o._id}
-                    onSearchChange={setOutletSearch}
-                    isLoading={outletsLoading}
-                    placeholder="Search outlets…"
-                    error={!!errors.outletId?.message}
-                    disabled={generateMutation.isPending}
-                    emptyMessage={
-                      debouncedOutletSearch
-                        ? `No outlets matching "${debouncedOutletSearch}"`
-                        : 'No active outlets found.'
-                    }
-                  />
-                )}
-              />
-            </FormField>
+            {/* No Working Outlet selected ("All Outlets") — generation
+                requires exactly one outlet to generate for. */}
+            {!hasWorkingOutlet && (
+              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-sm text-amber-800 dark:text-amber-400">
+                <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>Select a specific outlet from the switcher above to generate payroll.</span>
+              </div>
+            )}
 
             {/* Month + Year */}
             <div className="grid grid-cols-2 gap-3">
@@ -419,7 +383,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
 
             <button
               type="submit"
-              disabled={generateMutation.isPending}
+              disabled={generateMutation.isPending || !hasWorkingOutlet}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
                 'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',

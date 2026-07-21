@@ -25,32 +25,41 @@ import BikeTable                from '@/features/bike/components/BikeTable'
 import BikeTableSkeleton        from '@/features/bike/components/BikeTableSkeleton'
 import BikeFormModal            from '@/features/bike/components/BikeFormModal'
 import { useBikes }             from '@/features/bike/hooks/useBikes'
+import { useEffectiveOutletId } from '@/store/activeOutletStore'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import useDebounce              from '@/hooks/useDebounce'
 import { cn }                   from '@/lib/utils'
+
+// Roles that can manage (create/edit/delete) bikes — mirrors backend's
+// MANAGE_BIKES grant (super_admin, tenant_admin, manager — NOT cashier/viewer).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
 
 const PAGE_SIZE = 15
 
 // Operational status filter — '' means no filter sent to backend
 const STATUS_FILTERS = [
-  { label: 'All Statuses', value: ''            },
-  { label: 'Active',       value: 'ACTIVE'      },
-  { label: 'Maintenance',  value: 'MAINTENANCE' },
-  { label: 'Retired',      value: 'RETIRED'     },
+  { label: 'Semua Status', value: ''            },
+  { label: 'Aktif',        value: 'ACTIVE'      },
+  { label: 'Perawatan',    value: 'MAINTENANCE' },
+  { label: 'Nonaktif',     value: 'RETIRED'     },
 ]
 
 // isActive filter — mirrors EmployeesPage STATUS_FILTERS tab pattern
 const ACTIVE_FILTERS = [
-  { label: 'Active',   value: 'true'      },
-  { label: 'All',      value: undefined   },
-  { label: 'Inactive', value: 'false'     },
+  { label: 'Aktif',       value: 'true'      },
+  { label: 'Semua',       value: undefined   },
+  { label: 'Tidak Aktif', value: 'false'     },
 ]
 
 const BikesPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
   const [page,            setPage]            = useState(1)
   const [search,          setSearch]          = useState('')
   const [statusFilter,    setStatusFilter]    = useState('')
   const [isActiveFilter,  setIsActiveFilter]  = useState('true')  // show active by default
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const debouncedSearch = useDebounce(search, 400)
 
@@ -64,6 +73,7 @@ const BikesPage = () => {
     search:   debouncedSearch || undefined,
     status:   statusFilter    || undefined,
     isActive: isActiveFilter,
+    outletId: effectiveOutletId || undefined,
   })
 
   const bikes      = data?.data       ?? []
@@ -77,20 +87,22 @@ const BikesPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Bikes"
-          description="Manage bikes registered to your outlets."
+          title="Sepeda"
+          description="Kelola sepeda yang terdaftar di outlet Anda."
         >
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <PlusCircle className="w-4 h-4" />
-            Add Bike
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <PlusCircle className="w-4 h-4" />
+              Tambah Sepeda
+            </button>
+          )}
         </PageHeader>
 
         {/* Toolbar */}
@@ -100,7 +112,7 @@ const BikesPage = () => {
           <SearchInput
             value={search}
             onChange={handleSearch}
-            placeholder="Search by name or asset code…"
+            placeholder="Cari berdasarkan nama atau kode aset…"
             className="w-full sm:w-72"
             disabled={isLoading}
           />
@@ -143,7 +155,7 @@ const BikesPage = () => {
           {isFetching && !isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              Refreshing…
+              Memuat ulang…
             </div>
           )}
         </div>
@@ -155,8 +167,8 @@ const BikesPage = () => {
 
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load bikes"
-              message={error?.response?.data?.message ?? 'Could not reach the server.'}
+              title="Gagal memuat data sepeda"
+              message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
               onRetry={refetch}
             />
           )}
@@ -166,20 +178,22 @@ const BikesPage = () => {
               icon={<Bike className="w-5 h-5 text-muted-foreground" />}
               title={
                 debouncedSearch
-                  ? `No bikes found for "${debouncedSearch}"`
+                  ? `Tidak ada sepeda untuk "${debouncedSearch}"`
                   : statusFilter
-                  ? `No ${statusFilter.toLowerCase()} bikes`
+                  ? `Tidak ada sepeda berstatus ${statusFilter.toLowerCase()}`
                   : showingInactive
-                  ? 'No inactive bikes'
-                  : 'No bikes yet'
+                  ? 'Tidak ada sepeda tidak aktif'
+                  : 'Belum ada sepeda'
               }
               description={
                 hasFilters
-                  ? 'Try clearing the filters to see all bikes.'
-                  : 'Add your first bike to get started.'
+                  ? 'Coba hapus filter untuk melihat semua sepeda.'
+                  : canManage
+                  ? 'Tambahkan sepeda pertama Anda untuk memulai.'
+                  : 'Belum ada sepeda yang ditambahkan.'
               }
               action={
-                !hasFilters ? (
+                canManage && !hasFilters ? (
                   <button
                     onClick={() => setCreateModalOpen(true)}
                     className={cn(
@@ -188,7 +202,7 @@ const BikesPage = () => {
                     )}
                   >
                     <PlusCircle className="w-4 h-4" />
-                    Add First Bike
+                    Tambah Sepeda Pertama
                   </button>
                 ) : null
               }
@@ -197,7 +211,7 @@ const BikesPage = () => {
 
           {!isLoading && !isError && bikes.length > 0 && (
             <>
-              <BikeTable bikes={bikes} />
+              <BikeTable bikes={bikes} canManage={canManage} />
               <div className="px-4 py-3 border-t border-border">
                 <Pagination
                   page={pagination.page ?? page}

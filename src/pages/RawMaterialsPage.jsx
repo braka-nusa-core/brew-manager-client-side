@@ -32,9 +32,9 @@ const PAGE_SIZE = 15
 const MANAGE_ROLES = ['super_admin', 'tenant_admin']
 
 const STATUS_FILTERS = [
-  { label: 'All',      value: undefined },
-  { label: 'Active',   value: 'true'    },
-  { label: 'Inactive', value: 'false'   },
+  { label: 'Semua',       value: undefined },
+  { label: 'Aktif',       value: 'true'    },
+  { label: 'Tidak Aktif', value: 'false'   },
 ]
 
 const RawMaterialsPage = () => {
@@ -86,8 +86,8 @@ const RawMaterialsPage = () => {
 
         {/* Header */}
         <PageHeader
-          title="Raw Materials"
-          description="Manage ingredient costs used to calculate product HPP."
+          title="Bahan Baku"
+          description="Kelola biaya bahan yang digunakan untuk menghitung HPP produk."
         >
           {canManage && (
             <button
@@ -99,7 +99,7 @@ const RawMaterialsPage = () => {
               )}
             >
               <PackagePlus className="w-4 h-4" />
-              Add Raw Material
+              Tambah Bahan Baku
             </button>
           )}
         </PageHeader>
@@ -111,7 +111,7 @@ const RawMaterialsPage = () => {
           <SearchInput
             value={search}
             onChange={handleSearch}
-            placeholder="Search by name..."
+            placeholder="Cari berdasarkan nama..."
             className="w-full sm:w-72"
             disabled={isLoading}
           />
@@ -138,7 +138,7 @@ const RawMaterialsPage = () => {
           {isFetching && !isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              Refreshing…
+              Memuat ulang…
             </div>
           )}
         </div>
@@ -156,10 +156,10 @@ const RawMaterialsPage = () => {
           {/* ── Error state ─────────────────────────────────── */}
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load raw materials"
+              title="Gagal memuat data bahan baku"
               message={
                 error?.response?.data?.message
-                ?? 'Could not reach the server. Check your connection.'
+                ?? 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
               }
               onRetry={refetch}
             />
@@ -171,17 +171,17 @@ const RawMaterialsPage = () => {
               icon={<Beaker className="w-5 h-5 text-muted-foreground" />}
               title={
                 debouncedSearch
-                  ? `No raw materials found for "${debouncedSearch}"`
+                  ? `Tidak ada bahan baku untuk "${debouncedSearch}"`
                   : statusFilter === 'false'
-                  ? 'No inactive raw materials'
-                  : 'No raw materials yet'
+                  ? 'Tidak ada bahan baku tidak aktif'
+                  : 'Belum ada bahan baku'
               }
               description={
                 debouncedSearch
-                  ? 'Try a different search term or clear the filter.'
+                  ? 'Coba kata kunci lain atau hapus filter.'
                   : statusFilter
-                  ? 'Change the status filter to see other materials.'
-                  : 'Add your first raw material to get started.'
+                  ? 'Ubah filter status untuk melihat bahan lainnya.'
+                  : 'Tambahkan bahan baku pertama Anda untuk memulai.'
               }
               action={
                 canManage && !debouncedSearch && !statusFilter ? (
@@ -193,7 +193,7 @@ const RawMaterialsPage = () => {
                     )}
                   >
                     <PackagePlus className="w-4 h-4" />
-                    Add First Material
+                    Tambah Bahan Pertama
                   </button>
                 ) : null
               }

@@ -36,18 +36,24 @@ import {
   useRepairRecords,
 }                                     from '@/features/bikeMaintenance/hooks/useBikeMaintenance'
 import { useBikes }                   from '@/features/bike/hooks/useBikes'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import { cn }                         from '@/lib/utils'
 
 const PAGE_SIZE = 15
 
+// Roles that can manage (report damage/add repair/change status) bike
+// maintenance — mirrors backend's MANAGE_BIKES grant (super_admin,
+// tenant_admin, manager — NOT cashier/viewer).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
+
 const TABS = [
-  { key: 'damage', label: 'Damage Reports' },
-  { key: 'repair', label: 'Repair Records'  },
+  { key: 'damage', label: 'Laporan Kerusakan' },
+  { key: 'repair', label: 'Catatan Perbaikan'  },
 ]
 
 // ── Damage Reports Tab ─────────────────────────────────────────
 
-const DamageReportsTab = () => {
+const DamageReportsTab = ({ canManage }) => {
   const [page,         setPage]         = useState(1)
   const [bikeFilter,   setBikeFilter]   = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -83,7 +89,7 @@ const DamageReportsTab = () => {
             'disabled:opacity-50'
           )}
         >
-          <option value="">All Bikes</option>
+          <option value="">Semua Sepeda</option>
           {bikes.map((b) => (
             <option key={b._id} value={b._id}>
               {b.assetCode} — {b.name}
@@ -101,7 +107,7 @@ const DamageReportsTab = () => {
             'disabled:opacity-50'
           )}
         >
-          <option value="">All Statuses</option>
+          <option value="">Semua Status</option>
           {DAMAGE_REPORT_STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{s.replace('_', ' ')}</option>
           ))}
@@ -110,7 +116,7 @@ const DamageReportsTab = () => {
         {isFetching && !isLoading && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            Refreshing…
+            Memuat ulang…
           </div>
         )}
       </div>
@@ -121,8 +127,8 @@ const DamageReportsTab = () => {
 
         {!isLoading && isError && (
           <ErrorState
-            title="Failed to load damage reports"
-            message={error?.response?.data?.message ?? 'Could not reach the server.'}
+            title="Gagal memuat laporan kerusakan"
+            message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
             onRetry={refetch}
           />
         )}
@@ -130,18 +136,18 @@ const DamageReportsTab = () => {
         {!isLoading && !isError && reports.length === 0 && (
           <EmptyState
             icon={<AlertTriangle className="w-5 h-5 text-muted-foreground" />}
-            title="No damage reports found"
+            title="Belum ada laporan kerusakan"
             description={
               bikeFilter || statusFilter
-                ? 'Try clearing the filters.'
-                : 'No damage has been reported yet.'
+                ? 'Coba hapus filter.'
+                : 'Belum ada kerusakan yang dilaporkan.'
             }
           />
         )}
 
         {!isLoading && !isError && reports.length > 0 && (
           <>
-            <DamageReportsTable reports={reports} />
+            <DamageReportsTable reports={reports} canManage={canManage} />
             <div className="px-4 py-3 border-t border-border">
               <Pagination
                 page={pagination.page ?? page}
@@ -161,7 +167,7 @@ const DamageReportsTab = () => {
 
 // ── Repair Records Tab ─────────────────────────────────────────
 
-const RepairRecordsTab = ({ onAddRepair }) => {
+const RepairRecordsTab = ({ onAddRepair, canManage }) => {
   const [page,           setPage]           = useState(1)
   const [statusFilter,   setStatusFilter]   = useState('')
 
@@ -190,10 +196,10 @@ const RepairRecordsTab = ({ onAddRepair }) => {
             'disabled:opacity-50'
           )}
         >
-          <option value="">All Statuses</option>
+          <option value="">Semua Status</option>
           {REPAIR_STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s === 'IN_PROGRESS' ? 'In Progress' : 'Completed'}
+              {s === 'IN_PROGRESS' ? 'Sedang Dikerjakan' : 'Selesai'}
             </option>
           ))}
         </select>
@@ -201,7 +207,7 @@ const RepairRecordsTab = ({ onAddRepair }) => {
         {isFetching && !isLoading && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            Refreshing…
+            Memuat ulang…
           </div>
         )}
       </div>
@@ -212,8 +218,8 @@ const RepairRecordsTab = ({ onAddRepair }) => {
 
         {!isLoading && isError && (
           <ErrorState
-            title="Failed to load repair records"
-            message={error?.response?.data?.message ?? 'Could not reach the server.'}
+            title="Gagal memuat catatan perbaikan"
+            message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
             onRetry={refetch}
           />
         )}
@@ -221,12 +227,16 @@ const RepairRecordsTab = ({ onAddRepair }) => {
         {!isLoading && !isError && records.length === 0 && (
           <EmptyState
             icon={<Wrench className="w-5 h-5 text-muted-foreground" />}
-            title="No repair records found"
+            title="Belum ada catatan perbaikan"
             description={
-              statusFilter ? 'Try clearing the filter.' : 'No repairs have been logged yet.'
+              statusFilter
+                ? 'Coba hapus filter.'
+                : canManage
+                ? 'Belum ada perbaikan yang dicatat.'
+                : 'Belum ada perbaikan yang dicatat untuk outlet ini.'
             }
             action={
-              !statusFilter ? (
+              canManage && !statusFilter ? (
                 <button
                   onClick={onAddRepair}
                   className={cn(
@@ -235,7 +245,7 @@ const RepairRecordsTab = ({ onAddRepair }) => {
                   )}
                 >
                   <PlusCircle className="w-4 h-4" />
-                  Add Repair Record
+                  Tambah Catatan Perbaikan
                 </button>
               ) : null
             }
@@ -244,7 +254,7 @@ const RepairRecordsTab = ({ onAddRepair }) => {
 
         {!isLoading && !isError && records.length > 0 && (
           <>
-            <RepairRecordsTable records={records} />
+            <RepairRecordsTable records={records} canManage={canManage} />
             <div className="px-4 py-3 border-t border-border">
               <Pagination
                 page={pagination.page ?? page}
@@ -265,6 +275,9 @@ const RepairRecordsTab = ({ onAddRepair }) => {
 // ── BikeMaintenancePage ────────────────────────────────────────
 
 const BikeMaintenancePage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
+
   const [activeTab,          setActiveTab]          = useState('damage')
   const [damageModalOpen,    setDamageModalOpen]    = useState(false)
   const [repairModalOpen,    setRepairModalOpen]    = useState(false)
@@ -274,33 +287,35 @@ const BikeMaintenancePage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Bike Maintenance"
-          description="Track damage reports and repair records for all bikes."
+          title="Perawatan Sepeda"
+          description="Pantau laporan kerusakan dan catatan perbaikan untuk semua sepeda."
         >
-          <div className="flex items-center gap-2">
-            {activeTab === 'repair' && (
+          {canManage && (
+            <div className="flex items-center gap-2">
+              {activeTab === 'repair' && (
+                <button
+                  onClick={() => setRepairModalOpen(true)}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                    'border border-input hover:bg-muted transition-colors'
+                  )}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Tambah Perbaikan
+                </button>
+              )}
               <button
-                onClick={() => setRepairModalOpen(true)}
+                onClick={() => setDamageModalOpen(true)}
                 className={cn(
                   'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-                  'border border-input hover:bg-muted transition-colors'
+                  'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
                 )}
               >
-                <PlusCircle className="w-4 h-4" />
-                Add Repair
+                <AlertTriangle className="w-4 h-4" />
+                Laporkan Kerusakan
               </button>
-            )}
-            <button
-              onClick={() => setDamageModalOpen(true)}
-              className={cn(
-                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
-              )}
-            >
-              <AlertTriangle className="w-4 h-4" />
-              Report Damage
-            </button>
-          </div>
+            </div>
+          )}
         </PageHeader>
 
         {/* Tab switcher */}
@@ -321,9 +336,9 @@ const BikeMaintenancePage = () => {
           ))}
         </div>
 
-        {activeTab === 'damage' && <DamageReportsTab />}
+        {activeTab === 'damage' && <DamageReportsTab canManage={canManage} />}
         {activeTab === 'repair' && (
-          <RepairRecordsTab onAddRepair={() => setRepairModalOpen(true)} />
+          <RepairRecordsTab onAddRepair={() => setRepairModalOpen(true)} canManage={canManage} />
         )}
       </div>
 

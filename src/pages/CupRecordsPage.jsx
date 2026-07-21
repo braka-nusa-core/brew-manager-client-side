@@ -5,7 +5,9 @@
 // Default: last 30 days, all statuses.
 //
 // Backend list params: page, limit, riderId, outletId, status, date, startDate, endDate.
-// riderId and outletId filters are not exposed in this pass (future enhancement).
+// outletId now follows the Working Outlet (useEffectiveOutletId()) — the
+// same single source of truth used by every other outlet-scoped list page.
+// riderId filter is not exposed in this pass (future enhancement).
 // Free-text search does not exist on this endpoint — backend does not support it.
 //
 // Pattern follows SalesPage exactly.
@@ -22,9 +24,16 @@ import CupRecordTable         from '@/features/cup/components/CupRecordTable'
 import CupRecordTableSkeleton from '@/features/cup/components/CupRecordTableSkeleton'
 import CupRecordFormModal     from '@/features/cup/components/CupRecordFormModal'
 import { useCupRecords }      from '@/features/cup/hooks/useCupRecords'
+import { useEffectiveOutletId } from '@/store/activeOutletStore'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import { cn }                 from '@/lib/utils'
 
 const PAGE_SIZE = 20
+
+// Roles that can manage (create/edit/finalize/delete) cup records —
+// mirrors backend's MANAGE_CUPS grant (super_admin, tenant_admin,
+// manager, cashier — NOT viewer).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager', 'cashier']
 
 const today = () => new Date().toISOString().split('T')[0]
 const thirtyDaysAgo = () => {
@@ -35,19 +44,22 @@ const thirtyDaysAgo = () => {
 
 // Status filter options — "all" means no status param is sent to the backend
 const STATUS_OPTIONS = [
-  { value: '',           label: 'All Statuses' },
-  { value: 'draft',      label: 'Draft' },
-  { value: 'finalized',  label: 'Finalized' },
+  { value: '',           label: 'Semua Status' },
+  { value: 'draft',      label: 'Draf' },
+  { value: 'finalized',  label: 'Selesai' },
 ]
 
 // ── Component ─────────────────────────────────────────────────
 
 const CupRecordsPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
   const [page,            setPage]            = useState(1)
   const [startDate,       setStartDate]       = useState(thirtyDaysAgo())
   const [endDate,         setEndDate]         = useState(today())
   const [status,          setStatus]          = useState('')
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const resetPage = () => setPage(1)
 
@@ -57,6 +69,7 @@ const CupRecordsPage = () => {
     startDate: startDate || undefined,
     endDate:   endDate   || undefined,
     status:    status    || undefined,
+    outletId:  effectiveOutletId || undefined,
   })
 
   const records    = data?.data       ?? []
@@ -67,20 +80,22 @@ const CupRecordsPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Cup Records"
-          description="Track daily cup distribution and sales reconciliation per rider."
+          title="Catatan Cup"
+          description="Pantau distribusi cup harian dan rekonsiliasi penjualan per rider."
         >
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <PlusCircle className="w-4 h-4" />
-            New Record
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <PlusCircle className="w-4 h-4" />
+              Catatan Baru
+            </button>
+          )}
         </PageHeader>
 
         {/* Toolbar */}
@@ -89,7 +104,7 @@ const CupRecordsPage = () => {
 
             {/* Date range */}
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Dari</label>
               <input
                 type="date"
                 value={startDate}
@@ -101,7 +116,7 @@ const CupRecordsPage = () => {
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               />
-              <label className="text-xs text-muted-foreground">to</label>
+              <label className="text-xs text-muted-foreground">sampai</label>
               <input
                 type="date"
                 value={endDate}
@@ -137,7 +152,7 @@ const CupRecordsPage = () => {
             {isFetching && !isLoading && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                Refreshing…
+                Memuat ulang…
               </div>
             )}
           </div>
@@ -149,8 +164,8 @@ const CupRecordsPage = () => {
 
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load cup records"
-              message={error?.response?.data?.message ?? 'Could not reach the server.'}
+              title="Gagal memuat catatan cup"
+              message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
               onRetry={refetch}
             />
           )}
@@ -158,26 +173,32 @@ const CupRecordsPage = () => {
           {!isLoading && !isError && records.length === 0 && (
             <EmptyState
               icon={<Coffee className="w-5 h-5 text-muted-foreground" />}
-              title="No cup records found"
-              description="Adjust the date range or status filter, or create the first record."
+              title="Belum ada catatan cup"
+              description={
+                canManage
+                  ? 'Sesuaikan rentang tanggal atau filter status, atau buat catatan pertama.'
+                  : 'Sesuaikan rentang tanggal atau filter status untuk melihat catatan lainnya.'
+              }
               action={
-                <button
-                  onClick={() => setCreateModalOpen(true)}
-                  className={cn(
-                    'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-                    'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
-                  )}
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  New Record
-                </button>
+                canManage ? (
+                  <button
+                    onClick={() => setCreateModalOpen(true)}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                      'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
+                    )}
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Catatan Baru
+                  </button>
+                ) : null
               }
             />
           )}
 
           {!isLoading && !isError && records.length > 0 && (
             <>
-              <CupRecordTable records={records} />
+              <CupRecordTable records={records} canManage={canManage} />
               <div className="px-4 py-3 border-t border-border">
                 <Pagination
                   page={pagination.page ?? page}

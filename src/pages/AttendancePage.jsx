@@ -21,10 +21,16 @@ import AttendanceTableSkeleton     from '@/features/attendance/components/Attend
 import BulkAttendanceModal         from '@/features/attendance/components/BulkAttendanceModal'
 import { ATTENDANCE_STATUSES, STATUS_CONFIG } from '@/features/attendance/components/AttendanceStatusBadge'
 import { useAttendances }          from '@/features/attendance/hooks/useAttendance'
+import { useEffectiveOutletId }    from '@/store/activeOutletStore'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import useDebounce                 from '@/hooks/useDebounce'
 import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
+
+// Roles that can manage (bulk-input/edit/delete) attendance — mirrors
+// backend's MANAGE_ATTENDANCE grant (super_admin, tenant_admin, manager).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
 
 // Today in YYYY-MM-DD format for default endDate
 const today = () => new Date().toISOString().split('T')[0]
@@ -39,7 +45,7 @@ const thirtyDaysAgo = () => {
 // ── Status filter options ─────────────────────────────────────
 
 const STATUS_OPTIONS = [
-  { label: 'All Statuses', value: '' },
+  { label: 'Semua Status', value: '' },
   ...ATTENDANCE_STATUSES.map((s) => ({
     label: STATUS_CONFIG[s]?.label ?? s,
     value: s,
@@ -49,6 +55,9 @@ const STATUS_OPTIONS = [
 // ── Component ─────────────────────────────────────────────────
 
 const AttendancePage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
+
   // ── Filter state ───────────────────────────────────────────
   const [page,           setPage]          = useState(1)
   const [search,         setSearch]        = useState('')
@@ -56,6 +65,7 @@ const AttendancePage = () => {
   const [startDate,      setStartDate]     = useState(thirtyDaysAgo())
   const [endDate,        setEndDate]       = useState(today())
   const [bulkModalOpen,  setBulkModalOpen] = useState(false)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const debouncedSearch = useDebounce(search, 400)
 
@@ -80,6 +90,7 @@ const AttendancePage = () => {
     status:     statusFilter    || undefined,
     startDate:  startDate       || undefined,
     endDate:    endDate         || undefined,
+    outletId:   effectiveOutletId || undefined,
     // search maps to employeeId in MVP — future: backend text search
     // For now we show search as UI but don't pass to backend since
     // backend doesn't support name-based search on attendance.
@@ -95,20 +106,22 @@ const AttendancePage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Attendance"
-          description="Track and manage daily employee attendance records."
+          title="Absensi"
+          description="Pantau dan kelola data absensi harian karyawan."
         >
-          <button
-            onClick={() => setBulkModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <ListPlus className="w-4 h-4" />
-            Bulk Input
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setBulkModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <ListPlus className="w-4 h-4" />
+              Input Massal
+            </button>
+          )}
         </PageHeader>
 
         {/* Filters row */}
@@ -119,7 +132,7 @@ const AttendancePage = () => {
             <SearchInput
               value={search}
               onChange={handleSearch}
-              placeholder="Search employee name…"
+              placeholder="Cari nama karyawan…"
               className="w-full sm:w-64"
               disabled={isLoading}
             />
@@ -147,7 +160,7 @@ const AttendancePage = () => {
             {isFetching && !isLoading && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground self-center sm:ml-auto">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                Refreshing…
+                Memuat ulang…
               </div>
             )}
           </div>
@@ -155,7 +168,7 @@ const AttendancePage = () => {
           {/* Date range row */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Dari</label>
               <input
                 type="date"
                 value={startDate}
@@ -170,7 +183,7 @@ const AttendancePage = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">To</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Sampai</label>
               <input
                 type="date"
                 value={endDate}
@@ -187,9 +200,9 @@ const AttendancePage = () => {
             {/* Quick range buttons */}
             <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
               {[
-                { label: 'Today',   days: 0  },
-                { label: '7d',      days: 7  },
-                { label: '30d',     days: 30 },
+                { label: 'Hari Ini', days: 0  },
+                { label: '7h',       days: 7  },
+                { label: '30h',      days: 30 },
               ].map(({ label, days }) => (
                 <button
                   key={label}
@@ -217,10 +230,10 @@ const AttendancePage = () => {
 
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load attendance records"
+              title="Gagal memuat data absensi"
               message={
                 error?.response?.data?.message
-                ?? 'Could not reach the server. Check your connection and try again.'
+                ?? 'Tidak dapat terhubung ke server. Periksa koneksi Anda dan coba lagi.'
               }
               onRetry={refetch}
             />
@@ -231,16 +244,18 @@ const AttendancePage = () => {
               icon={<ClipboardCheck className="w-5 h-5 text-muted-foreground" />}
               title={
                 statusFilter
-                  ? `No "${statusFilter}" records in this date range`
-                  : 'No attendance records found'
+                  ? `Tidak ada data "${statusFilter}" pada rentang tanggal ini`
+                  : 'Belum ada data absensi'
               }
               description={
                 statusFilter
-                  ? 'Try changing the status filter or date range.'
-                  : 'Use "Bulk Input" to record attendance for your team.'
+                  ? 'Coba ubah filter status atau rentang tanggal.'
+                  : canManage
+                  ? 'Gunakan "Input Massal" untuk mencatat absensi tim Anda.'
+                  : 'Belum ada data absensi yang dicatat.'
               }
               action={
-                !statusFilter ? (
+                canManage && !statusFilter ? (
                   <button
                     onClick={() => setBulkModalOpen(true)}
                     className={cn(
@@ -249,7 +264,7 @@ const AttendancePage = () => {
                     )}
                   >
                     <ListPlus className="w-4 h-4" />
-                    Bulk Input Attendance
+                    Input Massal Absensi
                   </button>
                 ) : null
               }
@@ -261,7 +276,7 @@ const AttendancePage = () => {
               {/* Record count bar */}
               <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
-                  {pagination.total} record{pagination.total !== 1 ? 's' : ''} found
+                  {pagination.total} data ditemukan
                 </p>
 
                 {/* Status summary pills */}
@@ -282,7 +297,7 @@ const AttendancePage = () => {
                 </div>
               </div>
 
-              <AttendanceTable records={records} />
+              <AttendanceTable records={records} canManage={canManage} />
 
               <div className="px-4 py-3 border-t border-border">
                 <Pagination

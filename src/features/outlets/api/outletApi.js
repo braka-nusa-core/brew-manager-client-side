@@ -33,14 +33,6 @@ export const getOutlets = async (params = {}) => {
 }
 
 /**
- * Fetch a single outlet by ID.
- */
-export const getOutlet = async (outletId) => {
-  const { data } = await apiClient.get(`/outlets/${outletId}`)
-  return data.data
-}
-
-/**
  * Create a new outlet.
  * tenantId comes from JWT — backend derives it from req.tenantId.
  * @param {{ name: string, code?: string, address?: string, phone?: string }} payload

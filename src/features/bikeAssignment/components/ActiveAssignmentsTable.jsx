@@ -40,7 +40,7 @@ const getDaysActive = (startDate) => {
  *   assignmentIdMap: Map<string, string>, // bikeId.toString() → assignmentId (_id)
  * }} props
  */
-const ActiveAssignmentsTable = ({ assignments, assignmentIdMap }) => {
+const ActiveAssignmentsTable = ({ assignments, assignmentIdMap, canManage }) => {
   const [endTarget, setEndTarget] = useState(null) // { meta, assignmentId }
 
   const handleEndClick = (item) => {
@@ -67,7 +67,7 @@ const ActiveAssignmentsTable = ({ assignments, assignmentIdMap }) => {
             <DataTable.HeadCell>Rider</DataTable.HeadCell>
             <DataTable.HeadCell>Start Date</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden sm:table-cell">Days Active</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-28" />
+            {canManage && <DataTable.HeadCell className="w-28" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -117,19 +117,21 @@ const ActiveAssignmentsTable = ({ assignments, assignmentIdMap }) => {
                 </DataTable.Cell>
 
                 {/* End action */}
-                <DataTable.Cell>
-                  <button
-                    onClick={() => handleEndClick(item)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md',
-                      'border border-input hover:bg-muted text-muted-foreground hover:text-foreground',
-                      'transition-colors'
-                    )}
-                  >
-                    <LogOut className="w-3 h-3" />
-                    End
-                  </button>
-                </DataTable.Cell>
+                {canManage && (
+                  <DataTable.Cell>
+                    <button
+                      onClick={() => handleEndClick(item)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md',
+                        'border border-input hover:bg-muted text-muted-foreground hover:text-foreground',
+                        'transition-colors'
+                      )}
+                    >
+                      <LogOut className="w-3 h-3" />
+                      End
+                    </button>
+                  </DataTable.Cell>
+                )}
               </DataTable.Row>
             )
           })}

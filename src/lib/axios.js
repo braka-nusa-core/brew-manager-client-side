@@ -34,7 +34,43 @@ const apiClient = axios.create({
   headers:         { 'Content-Type': 'application/json' },
   timeout:         15_000,
 })
-console.log(import.meta.env.VITE_API_BASE_URL)
+
+// ── Single-flight refresh lock ──────────────────────────────────
+// Shared across all concurrent 401s. If a refresh is already in
+// flight, subsequent callers await the SAME promise instead of
+// firing their own /auth/refresh-token request. Reset to null once
+// the in-flight attempt settles (success or failure) so the next
+// distinct 401 (later in time) can trigger a fresh attempt.
+let refreshPromise = null
+
+const performRefresh = () => {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(
+        `${import.meta.env.VITE_API_BASE_URL}/auth/refresh-token`,
+        {},
+        { withCredentials: true }
+      )
+      .then(async ({ data }) => {
+        const newToken = data.data.accessToken
+        const { useAuthStore } = await import('@/store/authStore')
+        useAuthStore.getState().setAccessToken(newToken)
+        return newToken
+      })
+      .catch(async (err) => {
+        const { useAuthStore } = await import('@/store/authStore')
+        useAuthStore.getState().clearAuth()
+        throw err
+      })
+      .finally(() => {
+        // Clear the lock once this attempt settles so a later,
+        // independent 401 (e.g. after a subsequent successful login)
+        // can trigger its own refresh instead of reusing a stale promise.
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
 
 // ── Request interceptor: attach access token ──────────────────
 
@@ -68,31 +104,23 @@ apiClient.interceptors.response.use(
       original._retry = true
 
       try {
-        // Raw axios — completely bypasses this interceptor
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/refresh-token`,
-          {},
-          { withCredentials: true }
-        )
-
-        const newToken = data.data.accessToken
-
-        const { useAuthStore } = await import('@/store/authStore')
-        useAuthStore.getState().setAccessToken(newToken)
+        // Join the single in-flight refresh if one is already running,
+        // otherwise start a new one. Either way, all concurrent 401s
+        // resolve from the SAME underlying request — never more than
+        // one /auth/refresh-token call outstanding at a time.
+        const newToken = await performRefresh()
 
         // Retry the original failed request with the new token
         original.headers.Authorization = `Bearer ${newToken}`
         return apiClient(original)
 
-      } catch {
-        // Refresh failed — clear auth state.
+      } catch (refreshError) {
+        // Refresh failed — auth state already cleared once inside
+        // performRefresh() regardless of how many callers awaited it.
         // Do NOT use window.location.href — that causes a full page
         // reload which re-mounts App.jsx and re-runs initialize(),
         // creating an infinite loop. Instead, let ProtectedRoute
         // detect isAuth === false and redirect to /login naturally.
-        const { useAuthStore } = await import('@/store/authStore')
-        useAuthStore.getState().clearAuth()
-
         return Promise.reject(error)
       }
     }
@@ -101,4 +129,4 @@ apiClient.interceptors.response.use(
   }
 )
 
-export default apiClient  
+export default apiClient

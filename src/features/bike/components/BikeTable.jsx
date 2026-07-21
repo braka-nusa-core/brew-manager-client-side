@@ -118,7 +118,7 @@ const RowActions = ({ bike, onEdit, onStatus, onDelete }) => {
 
 // ── BikeTable ─────────────────────────────────────────────────
 
-const BikeTable = ({ bikes }) => {
+const BikeTable = ({ bikes, canManage }) => {
   const [editTarget,   setEditTarget]   = useState(null)
   const [statusTarget, setStatusTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -136,7 +136,7 @@ const BikeTable = ({ bikes }) => {
             <DataTable.HeadCell>Status</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden md:table-cell">Active</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden lg:table-cell">Notes</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-10" />
+            {canManage && <DataTable.HeadCell className="w-10" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -186,14 +186,16 @@ const BikeTable = ({ bikes }) => {
                 </DataTable.Cell>
 
                 {/* Actions */}
-                <DataTable.Cell>
-                  <RowActions
-                    bike={bike}
-                    onEdit={setEditTarget}
-                    onStatus={setStatusTarget}
-                    onDelete={setDeleteTarget}
-                  />
-                </DataTable.Cell>
+                {canManage && (
+                  <DataTable.Cell>
+                    <RowActions
+                      bike={bike}
+                      onEdit={setEditTarget}
+                      onStatus={setStatusTarget}
+                      onDelete={setDeleteTarget}
+                    />
+                  </DataTable.Cell>
+                )}
               </DataTable.Row>
             )
           })}

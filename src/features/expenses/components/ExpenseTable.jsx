@@ -116,7 +116,7 @@ const RowActions = ({ expense, onEdit }) => {
 /**
  * @param {{ expenses: Object[] }} props
  */
-const ExpenseTable = ({ expenses }) => {
+const ExpenseTable = ({ expenses, canManage }) => {
   const [editExpense, setEditExpense] = useState(null)
   const { outletMap } = useEntityMap()
 
@@ -131,7 +131,7 @@ const ExpenseTable = ({ expenses }) => {
               <DataTable.HeadCell>Description</DataTable.HeadCell>
               <DataTable.HeadCell>Amount</DataTable.HeadCell>
               <DataTable.HeadCell className="hidden lg:table-cell">Outlet</DataTable.HeadCell>
-              <DataTable.HeadCell className="w-10" />
+              {canManage && <DataTable.HeadCell className="w-10" />}
             </DataTable.HeadRow>
           </DataTable.Head>
 
@@ -143,8 +143,8 @@ const ExpenseTable = ({ expenses }) => {
               return (
                 <DataTable.Row
                   key={expense._id}
-                  onClick={() => setEditExpense(expense)}
-                  className="cursor-pointer"
+                  onClick={canManage ? () => setEditExpense(expense) : undefined}
+                  className={canManage ? 'cursor-pointer' : undefined}
                 >
                   {/* Date */}
                   <DataTable.Cell>
@@ -181,9 +181,11 @@ const ExpenseTable = ({ expenses }) => {
                   </DataTable.Cell>
 
                   {/* Actions */}
-                  <DataTable.Cell onClick={(e) => e.stopPropagation()}>
-                    <RowActions expense={expense} onEdit={setEditExpense} />
-                  </DataTable.Cell>
+                  {canManage && (
+                    <DataTable.Cell onClick={(e) => e.stopPropagation()}>
+                      <RowActions expense={expense} onEdit={setEditExpense} />
+                    </DataTable.Cell>
+                  )}
                 </DataTable.Row>
               )
             })}

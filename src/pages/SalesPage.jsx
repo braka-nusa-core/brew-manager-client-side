@@ -19,10 +19,16 @@ import SalesTable                  from '@/features/sales/components/SalesTable'
 import SalesTableSkeleton          from '@/features/sales/components/SalesTableSkeleton'
 import SalesFormModal              from '@/features/sales/components/SalesFormModal'
 import { useSales }                from '@/features/sales/hooks/useSales'
+import { useEffectiveOutletId }    from '@/store/activeOutletStore'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import useDebounce                 from '@/hooks/useDebounce'
 import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
+
+// Roles that can manage (create/edit/delete) sales — mirrors backend's
+// MANAGE_SALES grant (super_admin, tenant_admin, manager, cashier).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager', 'cashier']
 
 const today       = () => new Date().toISOString().split('T')[0]
 const thirtyDaysAgo = () => {
@@ -38,12 +44,16 @@ const formatCurrency = (n) =>
 // ── Component ─────────────────────────────────────────────────
 
 const SalesPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
+
   const [page,            setPage]            = useState(1)
   const [search,          setSearch]          = useState('')
   const [startDate,       setStartDate]       = useState(thirtyDaysAgo())
   const [endDate,         setEndDate]         = useState(today())
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
+  const effectiveOutletId = useEffectiveOutletId()
   const debouncedSearch = useDebounce(search, 400)
   const resetPage       = () => setPage(1)
 
@@ -52,6 +62,7 @@ const SalesPage = () => {
     limit:     PAGE_SIZE,
     startDate: startDate || undefined,
     endDate:   endDate   || undefined,
+    outletId:  effectiveOutletId || undefined,
     // employeeId filter: future — when backend supports name search
   })
 
@@ -67,20 +78,22 @@ const SalesPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Sales"
-          description="Track daily sales contributions per employee across your outlets."
+          title="Penjualan"
+          description="Pantau kontribusi penjualan harian per karyawan di semua outlet Anda."
         >
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <PlusCircle className="w-4 h-4" />
-            Record Sales
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <PlusCircle className="w-4 h-4" />
+              Catat Penjualan
+            </button>
+          )}
         </PageHeader>
 
         {/* Toolbar */}
@@ -89,7 +102,7 @@ const SalesPage = () => {
           {/* Row 1: Date range + page totals */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Dari</label>
               <input
                 type="date"
                 value={startDate}
@@ -101,7 +114,7 @@ const SalesPage = () => {
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               />
-              <label className="text-xs text-muted-foreground">to</label>
+              <label className="text-xs text-muted-foreground">sampai</label>
               <input
                 type="date"
                 value={endDate}
@@ -121,10 +134,10 @@ const SalesPage = () => {
                 <div className="flex items-center gap-1">
                   <Coffee className="w-3.5 h-3.5" />
                   <span className="font-semibold text-foreground tabular-nums">{pageTotalCups}</span>
-                  <span>cups</span>
+                  <span>cup</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span>Page total:</span>
+                  <span>Total halaman:</span>
                   <span className="font-semibold text-foreground tabular-nums">
                     {formatCurrency(pageTotalRevenue)}
                   </span>
@@ -136,7 +149,7 @@ const SalesPage = () => {
             {isFetching && !isLoading && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                Refreshing…
+                Memuat ulang…
               </div>
             )}
           </div>
@@ -148,8 +161,8 @@ const SalesPage = () => {
 
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load sales"
-              message={error?.response?.data?.message ?? 'Could not reach the server.'}
+              title="Gagal memuat data penjualan"
+              message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
               onRetry={refetch}
             />
           )}
@@ -157,26 +170,32 @@ const SalesPage = () => {
           {!isLoading && !isError && sales.length === 0 && (
             <EmptyState
               icon={<TrendingUp className="w-5 h-5 text-muted-foreground" />}
-              title="No sales records found"
-              description="Adjust the date range or record the first sales entry."
+              title="Tidak ada data penjualan"
+              description={
+                canManage
+                  ? 'Sesuaikan rentang tanggal atau catat penjualan pertama Anda.'
+                  : 'Sesuaikan rentang tanggal untuk melihat data penjualan lainnya.'
+              }
               action={
-                <button
-                  onClick={() => setCreateModalOpen(true)}
-                  className={cn(
-                    'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-                    'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
-                  )}
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  Record First Sales
-                </button>
+                canManage ? (
+                  <button
+                    onClick={() => setCreateModalOpen(true)}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                      'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
+                    )}
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Catat Penjualan Pertama
+                  </button>
+                ) : null
               }
             />
           )}
 
           {!isLoading && !isError && sales.length > 0 && (
             <>
-              <SalesTable sales={sales} />
+              <SalesTable sales={sales} canManage={canManage} />
               <div className="px-4 py-3 border-t border-border">
                 <Pagination
                   page={pagination.page ?? page}

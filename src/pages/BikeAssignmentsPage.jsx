@@ -33,25 +33,31 @@ import {
   useActiveAssignments,
   useBikeAssignments,
 }                                   from '@/features/bikeAssignment/hooks/useBikeAssignments'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import { cn }                       from '@/lib/utils'
 
 const PAGE_SIZE = 15
 
+// Roles that can manage (assign/end) bike assignments — mirrors
+// backend's MANAGE_BIKES grant (super_admin, tenant_admin, manager —
+// NOT cashier/viewer).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
+
 // History filter options — maps to ?active= query param
 const HISTORY_FILTERS = [
-  { label: 'All',    value: undefined  },
-  { label: 'Active', value: 'true'     },
-  { label: 'Ended',  value: 'false'    },
+  { label: 'Semua',   value: undefined  },
+  { label: 'Aktif',   value: 'true'     },
+  { label: 'Selesai', value: 'false'    },
 ]
 
 const TABS = [
-  { key: 'active',  label: 'Active Assignments' },
-  { key: 'history', label: 'History'             },
+  { key: 'active',  label: 'Penugasan Aktif' },
+  { key: 'history', label: 'Riwayat'          },
 ]
 
 // ── Active Tab ────────────────────────────────────────────────
 
-const ActiveTab = () => {
+const ActiveTab = ({ canManage }) => {
   // GET /active — denormalized display data
   const {
     data:      activeAssignments,
@@ -82,8 +88,8 @@ const ActiveTab = () => {
   if (activeError) {
     return (
       <ErrorState
-        title="Failed to load active assignments"
-        message={activeErr?.response?.data?.message ?? 'Could not reach the server.'}
+        title="Gagal memuat penugasan aktif"
+        message={activeErr?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
         onRetry={activeRefetch}
       />
     )
@@ -93,8 +99,12 @@ const ActiveTab = () => {
     return (
       <EmptyState
         icon={<Bike className="w-5 h-5 text-muted-foreground" />}
-        title="No active assignments"
-        description="All bikes are currently unassigned. Use 'Assign Bike' to create one."
+        title="Belum ada penugasan aktif"
+        description={
+          canManage
+            ? "Semua sepeda saat ini belum ditugaskan. Gunakan 'Tugaskan Sepeda' untuk membuat penugasan."
+            : 'Semua sepeda saat ini belum ditugaskan.'
+        }
       />
     )
   }
@@ -103,6 +113,7 @@ const ActiveTab = () => {
     <ActiveAssignmentsTable
       assignments={items}
       assignmentIdMap={assignmentIdMap}
+      canManage={canManage}
     />
   )
 }
@@ -155,7 +166,7 @@ const HistoryTab = () => {
         {isFetching && !isLoading && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            Refreshing…
+            Memuat ulang…
           </div>
         )}
       </div>
@@ -166,8 +177,8 @@ const HistoryTab = () => {
 
         {!isLoading && isError && (
           <ErrorState
-            title="Failed to load history"
-            message={error?.response?.data?.message ?? 'Could not reach the server.'}
+            title="Gagal memuat riwayat"
+            message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
             onRetry={refetch}
           />
         )}
@@ -175,11 +186,11 @@ const HistoryTab = () => {
         {!isLoading && !isError && assignments.length === 0 && (
           <EmptyState
             icon={<UserCheck className="w-5 h-5 text-muted-foreground" />}
-            title="No assignment records found"
+            title="Belum ada riwayat penugasan"
             description={
-              activeFilter === 'true'  ? 'No active assignments.'  :
-              activeFilter === 'false' ? 'No ended assignments yet.' :
-              'No assignment history yet.'
+              activeFilter === 'true'  ? 'Belum ada penugasan aktif.'  :
+              activeFilter === 'false' ? 'Belum ada penugasan yang selesai.' :
+              'Belum ada riwayat penugasan.'
             }
           />
         )}
@@ -207,6 +218,9 @@ const HistoryTab = () => {
 // ── BikeAssignmentsPage ───────────────────────────────────────
 
 const BikeAssignmentsPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
+
   const [activeTab,       setActiveTab]       = useState('active')
   const [assignModalOpen, setAssignModalOpen] = useState(false)
 
@@ -215,20 +229,22 @@ const BikeAssignmentsPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Bike Assignments"
-          description="Track which bikes are assigned to which riders."
+          title="Penugasan Sepeda"
+          description="Pantau sepeda mana yang ditugaskan ke rider mana."
         >
-          <button
-            onClick={() => setAssignModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <PlusCircle className="w-4 h-4" />
-            Assign Bike
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setAssignModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <PlusCircle className="w-4 h-4" />
+              Tugaskan Sepeda
+            </button>
+          )}
         </PageHeader>
 
         {/* Tab switcher */}
@@ -252,7 +268,7 @@ const BikeAssignmentsPage = () => {
         {/* Active tab content */}
         {activeTab === 'active' && (
           <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <ActiveTab />
+            <ActiveTab canManage={canManage} />
           </div>
         )}
 

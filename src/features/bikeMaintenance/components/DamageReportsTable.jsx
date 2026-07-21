@@ -104,7 +104,7 @@ const RowActions = ({ report, onStatus, onAddRepair }) => {
 
 // ── DamageReportsTable ─────────────────────────────────────────
 
-const DamageReportsTable = ({ reports }) => {
+const DamageReportsTable = ({ reports, canManage }) => {
   const [statusTarget, setStatusTarget]   = useState(null)
   const [repairTarget, setRepairTarget]   = useState(null) // { damageReportId, label }
 
@@ -141,7 +141,7 @@ const DamageReportsTable = ({ reports }) => {
             <DataTable.HeadCell>Status</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden md:table-cell">Reported</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden lg:table-cell">Notes</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-10" />
+            {canManage && <DataTable.HeadCell className="w-10" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -189,13 +189,15 @@ const DamageReportsTable = ({ reports }) => {
                   )}
                 </DataTable.Cell>
 
-                <DataTable.Cell>
-                  <RowActions
-                    report={report}
-                    onStatus={handleStatus}
-                    onAddRepair={handleAddRepair}
-                  />
-                </DataTable.Cell>
+                {canManage && (
+                  <DataTable.Cell>
+                    <RowActions
+                      report={report}
+                      onStatus={handleStatus}
+                      onAddRepair={handleAddRepair}
+                    />
+                  </DataTable.Cell>
+                )}
               </DataTable.Row>
             )
           })}

@@ -73,9 +73,10 @@ const InfoRow = ({ icon: Icon, label, value, children }) => (
  *   open: boolean,
  *   onClose: () => void,
  *   record: Object | null   — the full attendance record from the list
+ *   canManage: boolean      — whether the current role may edit/delete
  * }} props
  */
-const AttendanceDetailModal = ({ open, onClose, record }) => {
+const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
   const toast          = useToast()
   const updateMutation = useUpdateAttendance()
   const deleteMutation = useDeleteAttendance()
@@ -188,115 +189,141 @@ const AttendanceDetailModal = ({ open, onClose, record }) => {
           </InfoRow>
         </div>
 
-        {/* Editable form */}
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div className="space-y-4">
+        {/* Editable form — only for roles with MANAGE_ATTENDANCE.
+            Read-only roles (e.g. viewer) see status/notes as plain text
+            below, with no Save/Delete controls at all. */}
+        {canManage ? (
+          <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <div className="space-y-4">
 
-            {/* Status selector */}
-            <FormField label="Status" error={errors.status?.message} required>
-              <Select
-                {...register('status')}
-                error={!!errors.status?.message}
-                disabled={isPending}
-              >
-                {ATTENDANCE_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </Select>
-
-              {/* Live preview of selected status */}
-              <div className="mt-2">
-                <AttendanceStatusBadge status={watchedStatus} />
-              </div>
-            </FormField>
-
-            {/* Notes */}
-            <FormField label="Notes" error={errors.notes?.message}>
-              <textarea
-                {...register('notes')}
-                placeholder="Optional notes (e.g. reason for absence, late arrival time…)"
-                disabled={isPending}
-                rows={3}
-                className={cn(
-                  'w-full px-3 py-2 rounded-md border bg-background text-sm',
-                  'placeholder:text-muted-foreground resize-none',
-                  'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
-                  'disabled:opacity-50 disabled:cursor-not-allowed transition-colors',
-                  errors.notes?.message ? 'border-destructive' : 'border-input'
-                )}
-              />
-            </FormField>
-
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-border">
-
-            {/* Delete section */}
-            <div>
-              {!confirmDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
+              {/* Status selector */}
+              <FormField label="Status" error={errors.status?.message} required>
+                <Select
+                  {...register('status')}
+                  error={!!errors.status?.message}
                   disabled={isPending}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Delete record
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-destructive font-medium">Confirm delete?</p>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isPending}
-                    className="text-xs font-semibold text-destructive hover:underline disabled:opacity-50"
-                  >
-                    {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Cancel
-                  </button>
+                  {ATTENDANCE_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </option>
+                  ))}
+                </Select>
+
+                {/* Live preview of selected status */}
+                <div className="mt-2">
+                  <AttendanceStatusBadge status={watchedStatus} />
                 </div>
-              )}
+              </FormField>
+
+              {/* Notes */}
+              <FormField label="Notes" error={errors.notes?.message}>
+                <textarea
+                  {...register('notes')}
+                  placeholder="Optional notes (e.g. reason for absence, late arrival time…)"
+                  disabled={isPending}
+                  rows={3}
+                  className={cn(
+                    'w-full px-3 py-2 rounded-md border bg-background text-sm',
+                    'placeholder:text-muted-foreground resize-none',
+                    'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
+                    'disabled:opacity-50 disabled:cursor-not-allowed transition-colors',
+                    errors.notes?.message ? 'border-destructive' : 'border-input'
+                  )}
+                />
+              </FormField>
+
             </div>
 
-            {/* Save / Cancel */}
-            <div className="flex items-center gap-2">
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-border">
+
+              {/* Delete section */}
+              <div>
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    disabled={isPending}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete record
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-destructive font-medium">Confirm delete?</p>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={isPending}
+                      className="text-xs font-semibold text-destructive hover:underline disabled:opacity-50"
+                    >
+                      {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Save / Cancel */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isPending}
+                  className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isPending || !isDirty}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md',
+                    'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                >
+                  {updateMutation.isPending && (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  )}
+                  {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Status</p>
+              <AttendanceStatusBadge status={record.status} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Notes</p>
+              <p className="text-sm text-foreground">
+                {record.notes || <span className="text-muted-foreground">No notes.</span>}
+              </p>
+            </div>
+            <div className="flex justify-end pt-4 border-t border-border">
               <button
                 type="button"
                 onClick={onClose}
-                disabled={isPending}
-                className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors"
               >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isPending || !isDirty}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md',
-                  'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
-                )}
-              >
-                {updateMutation.isPending && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                )}
-                {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+                Close
               </button>
             </div>
-
           </div>
-        </form>
+        )}
 
       </div>
     </Modal>

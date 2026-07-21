@@ -30,9 +30,9 @@ const PAGE_SIZE = 15
 const MANAGE_ROLES = ['super_admin', 'tenant_admin']
 
 const STATUS_FILTERS = [
-  { label: 'All',      value: undefined },
-  { label: 'Active',   value: 'true'    },
-  { label: 'Inactive', value: 'false'   },
+  { label: 'Semua',       value: undefined },
+  { label: 'Aktif',       value: 'true'    },
+  { label: 'Tidak Aktif', value: 'false'   },
 ]
 
 const ProductsPage = () => {
@@ -84,8 +84,8 @@ const ProductsPage = () => {
 
         {/* Header */}
         <PageHeader
-          title="Products"
-          description="Manage your menu products, pricing, and cost margins."
+          title="Produk"
+          description="Kelola produk menu, harga, dan margin biaya Anda."
         >
           {canManage && (
             <button
@@ -97,7 +97,7 @@ const ProductsPage = () => {
               )}
             >
               <PackagePlus className="w-4 h-4" />
-              Add Product
+              Tambah Produk
             </button>
           )}
         </PageHeader>
@@ -109,7 +109,7 @@ const ProductsPage = () => {
           <SearchInput
             value={search}
             onChange={handleSearch}
-            placeholder="Search by name..."
+            placeholder="Cari berdasarkan nama..."
             className="w-full sm:w-72"
             disabled={isLoading}
           />
@@ -136,7 +136,7 @@ const ProductsPage = () => {
           {isFetching && !isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              Refreshing…
+              Memuat ulang…
             </div>
           )}
         </div>
@@ -154,10 +154,10 @@ const ProductsPage = () => {
           {/* ── Error state ─────────────────────────────────── */}
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load products"
+              title="Gagal memuat data produk"
               message={
                 error?.response?.data?.message
-                ?? 'Could not reach the server. Check your connection.'
+                ?? 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
               }
               onRetry={refetch}
             />
@@ -169,17 +169,17 @@ const ProductsPage = () => {
               icon={<Package className="w-5 h-5 text-muted-foreground" />}
               title={
                 debouncedSearch
-                  ? `No products found for "${debouncedSearch}"`
+                  ? `Tidak ada produk untuk "${debouncedSearch}"`
                   : statusFilter === 'false'
-                  ? 'No inactive products'
-                  : 'No products yet'
+                  ? 'Tidak ada produk tidak aktif'
+                  : 'Belum ada produk'
               }
               description={
                 debouncedSearch
-                  ? 'Try a different search term or clear the filter.'
+                  ? 'Coba kata kunci lain atau hapus filter.'
                   : statusFilter
-                  ? 'Change the status filter to see other products.'
-                  : 'Add your first product to get started.'
+                  ? 'Ubah filter status untuk melihat produk lainnya.'
+                  : 'Tambahkan produk pertama Anda untuk memulai.'
               }
               action={
                 canManage && !debouncedSearch && !statusFilter ? (
@@ -191,7 +191,7 @@ const ProductsPage = () => {
                     )}
                   >
                     <PackagePlus className="w-4 h-4" />
-                    Add First Product
+                    Tambah Produk Pertama
                   </button>
                 ) : null
               }

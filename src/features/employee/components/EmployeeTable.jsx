@@ -3,6 +3,7 @@ import { useState }                  from 'react'
 import { MoreHorizontal, Pencil, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react'
 import DataTable                     from '@/components/shared/DataTable'
 import EmployeeStatusBadge           from './EmployeeStatusBadge'
+import EmployeeKtpBadge              from './EmployeeKtpBadge'
 import EmployeeFormModal             from './EmployeeFormModal'
 import DeleteConfirmDialog           from './DeleteConfirmDialog'
 import { useToggleEmployeeActive }   from '../hooks/useEmployees'
@@ -114,7 +115,7 @@ const RowActions = ({ employee, onEdit, onDelete }) => {
   )
 }
 
-const EmployeeTable = ({ employees }) => {
+const EmployeeTable = ({ employees, canManage }) => {
   const [editTarget,   setEditTarget]   = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
@@ -130,7 +131,8 @@ const EmployeeTable = ({ employees }) => {
             <DataTable.HeadCell>Base Salary</DataTable.HeadCell>
             <DataTable.HeadCell>Join Date</DataTable.HeadCell>
             <DataTable.HeadCell>Status</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-12" />
+            <DataTable.HeadCell>KTP</DataTable.HeadCell>
+            {canManage && <DataTable.HeadCell className="w-12" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -189,8 +191,14 @@ const EmployeeTable = ({ employees }) => {
               </DataTable.Cell>
 
               <DataTable.Cell>
-                <RowActions employee={emp} onEdit={setEditTarget} onDelete={setDeleteTarget} />
+                <EmployeeKtpBadge ktpStatus={emp.ktpStatus} />
               </DataTable.Cell>
+
+              {canManage && (
+                <DataTable.Cell>
+                  <RowActions employee={emp} onEdit={setEditTarget} onDelete={setDeleteTarget} />
+                </DataTable.Cell>
+              )}
             </DataTable.Row>
           ))}
         </DataTable.Body>

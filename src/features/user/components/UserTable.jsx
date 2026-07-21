@@ -13,6 +13,7 @@ import UserFormModal                from './UserFormModal'
 import ResetPasswordDialog          from './ResetPasswordDialog'
 import ToggleActiveDialog           from './ToggleActiveDialog'
 import useEntityMap                 from '@/hooks/useEntityMap'
+import { useAuthStore, selectUser }  from '@/store/authStore'
 import { cn }                       from '@/lib/utils'
 
 const ActiveBadge = ({ isActive }) => (
@@ -33,7 +34,7 @@ const UserAvatar = ({ name }) => (
   </div>
 )
 
-const RowActions = ({ user, onEdit, onReset, onToggle }) => {
+const RowActions = ({ user, onEdit, onReset, onToggle, isSelf }) => {
   const [open, setOpen]       = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
   const triggerRef            = useRef(null)
@@ -67,10 +68,15 @@ const RowActions = ({ user, onEdit, onReset, onToggle }) => {
               <KeyRound  className="w-3.5 h-3.5 text-muted-foreground" />Reset Password
             </button>
             <div className="border-t border-border" />
-            <button onClick={action(onToggle)}
+            <button onClick={isSelf ? undefined : action(onToggle)}
+              disabled={isSelf}
+              title={isSelf ? 'You cannot deactivate your own account' : undefined}
               className={cn('flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors',
-                user.isActive ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30'
-                              : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30')}>
+                isSelf
+                  ? 'text-muted-foreground opacity-50 cursor-not-allowed'
+                  : user.isActive
+                    ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+                    : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30')}>
               {user.isActive
                 ? <><UserX  className="w-3.5 h-3.5" />Deactivate</>
                 : <><UserCheck className="w-3.5 h-3.5" />Activate</>}
@@ -88,6 +94,7 @@ const UserTable = ({ users }) => {
   const [resetTarget,  setResetTarget]  = useState(null)
   const [toggleTarget, setToggleTarget] = useState(null)
   const { outletMap } = useEntityMap()
+  const currentUser    = useAuthStore(selectUser)
 
   return (
     <>
@@ -122,7 +129,13 @@ const UserTable = ({ users }) => {
                 </DataTable.Cell>
                 <DataTable.Cell><ActiveBadge isActive={u.isActive} /></DataTable.Cell>
                 <DataTable.Cell>
-                  <RowActions user={u} onEdit={setEditTarget} onReset={setResetTarget} onToggle={setToggleTarget} />
+                  <RowActions
+                    user={u}
+                    onEdit={setEditTarget}
+                    onReset={setResetTarget}
+                    onToggle={setToggleTarget}
+                    isSelf={!!currentUser?._id && currentUser._id === u._id}
+                  />
                 </DataTable.Cell>
               </DataTable.Row>
             )

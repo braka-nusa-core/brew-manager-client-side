@@ -27,9 +27,9 @@ import { cn }                             from '@/lib/utils'
 const MANAGE_ROLES = ['super_admin', 'tenant_admin']
 
 const STATUS_FILTERS = [
-  { label: 'All',      value: undefined  },
-  { label: 'Active',   value: 'true'     },
-  { label: 'Inactive', value: 'false'    },
+  { label: 'Semua',       value: undefined  },
+  { label: 'Aktif',       value: 'true'     },
+  { label: 'Tidak Aktif', value: 'false'    },
 ]
 
 // ── Page ──────────────────────────────────────────────────────
@@ -66,8 +66,8 @@ const OutletsPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Outlets"
-          description="Manage your coffee shop locations."
+          title="Outlet"
+          description="Kelola lokasi coffee shop Anda."
         >
           {canManage && (
             <button
@@ -79,7 +79,7 @@ const OutletsPage = () => {
               )}
             >
               <Plus className="w-4 h-4" />
-              Add Outlet
+              Tambah Outlet
             </button>
           )}
         </PageHeader>
@@ -89,7 +89,7 @@ const OutletsPage = () => {
           <SearchInput
             value={search}
             onChange={(v) => setSearch(v)}
-            placeholder="Search outlet name or code…"
+            placeholder="Cari nama atau kode outlet…"
             className="w-full sm:w-64"
             disabled={isLoading}
           />
@@ -115,7 +115,7 @@ const OutletsPage = () => {
           {isFetching && !isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground self-center sm:ml-auto">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              Refreshing…
+              Memuat ulang…
             </div>
           )}
         </div>
@@ -126,18 +126,18 @@ const OutletsPage = () => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <LayoutGrid className="w-4 h-4" />
               <span>
-                {outlets.length} outlet{outlets.length !== 1 ? 's' : ''}
+                {outlets.length} outlet
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-                {outlets.filter((o) => o.isActive).length} active
+                {outlets.filter((o) => o.isActive).length} aktif
               </span>
               {outlets.filter((o) => !o.isActive).length > 0 && (
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-                  {outlets.filter((o) => !o.isActive).length} inactive
+                  {outlets.filter((o) => !o.isActive).length} tidak aktif
                 </span>
               )}
             </div>
@@ -149,9 +149,13 @@ const OutletsPage = () => {
 
         {!isLoading && isError && (
           <ErrorState
-            title="Failed to load outlets"
-            message={error?.response?.data?.message ?? 'Could not reach the server.'}
-            onRetry={refetch}
+            title={error?.response?.status === 403 ? 'Akses Ditolak' : 'Gagal memuat data outlet'}
+            message={
+              error?.response?.status === 403
+                ? 'Melihat outlet memerlukan izin tambahan.'
+                : (error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.')
+            }
+            onRetry={error?.response?.status !== 403 ? refetch : undefined}
           />
         )}
 
@@ -160,17 +164,17 @@ const OutletsPage = () => {
             icon={<Store className="w-5 h-5 text-muted-foreground" />}
             title={
               debouncedSearch
-                ? `No outlets matching "${debouncedSearch}"`
+                ? `Tidak ada outlet cocok dengan "${debouncedSearch}"`
                 : statusFilter === 'false'
-                ? 'No inactive outlets'
-                : 'No outlets yet'
+                ? 'Tidak ada outlet tidak aktif'
+                : 'Belum ada outlet'
             }
             description={
               debouncedSearch
-                ? 'Try a different search term.'
+                ? 'Coba kata kunci pencarian lain.'
                 : canManage
-                ? 'Add your first outlet to get started.'
-                : 'No outlets have been configured yet.'
+                ? 'Tambahkan outlet pertama Anda untuk memulai.'
+                : 'Belum ada outlet yang dikonfigurasi.'
             }
             action={
               canManage && !debouncedSearch ? (
@@ -179,7 +183,7 @@ const OutletsPage = () => {
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Add First Outlet
+                  Tambah Outlet Pertama
                 </button>
               ) : null
             }

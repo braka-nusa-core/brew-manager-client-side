@@ -70,7 +70,7 @@ const getBalanceSummary = (items = []) => {
 
 // ── RowActions ────────────────────────────────────────────────
 
-const RowActions = ({ record, onView, onEdit, onFinalize, onDelete }) => {
+const RowActions = ({ record, onView, onEdit, onFinalize, onDelete, canManage }) => {
   const [open, setOpen]       = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
   const triggerRef            = useRef(null)
@@ -121,8 +121,8 @@ const RowActions = ({ record, onView, onEdit, onFinalize, onDelete }) => {
               View Detail
             </button>
 
-            {/* Draft-only actions */}
-            {isDraft && (
+            {/* Draft-only actions — managing roles only */}
+            {canManage && isDraft && (
               <>
                 <div className="border-t border-border" />
 
@@ -166,7 +166,7 @@ const RowActions = ({ record, onView, onEdit, onFinalize, onDelete }) => {
 /**
  * @param {{ records: Object[] }} props
  */
-const CupRecordTable = ({ records }) => {
+const CupRecordTable = ({ records, canManage }) => {
   const [viewTarget,     setViewTarget]     = useState(null)
   const [editTarget,     setEditTarget]     = useState(null)
   const [finalizeTarget, setFinalizeTarget] = useState(null)
@@ -266,6 +266,7 @@ const CupRecordTable = ({ records }) => {
                     onEdit={setEditTarget}
                     onFinalize={setFinalizeTarget}
                     onDelete={setDeleteTarget}
+                    canManage={canManage}
                   />
                 </DataTable.Cell>
               </DataTable.Row>

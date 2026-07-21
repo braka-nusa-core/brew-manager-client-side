@@ -17,7 +17,7 @@ import { cn }        from '@/lib/utils'
 const SearchInput = ({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder = 'Cari...',
   className,
   disabled = false,
 }) => (
@@ -43,7 +43,7 @@ const SearchInput = ({
       <button
         onClick={() => onChange('')}
         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Clear search"
+        aria-label="Hapus pencarian"
       >
         <X className="w-3.5 h-3.5" />
       </button>

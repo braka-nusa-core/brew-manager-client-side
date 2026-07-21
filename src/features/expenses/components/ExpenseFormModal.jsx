@@ -3,7 +3,8 @@
 //
 // Backend contract (from expense.validation.js + expense.service.js):
 //   CREATE POST /expenses:
-//     outletId    (required) ObjectId — user picks from outlet selector
+//     outletId    (required) ObjectId — now derived from the Working
+//                 Outlet (useEffectiveOutletId()), never a form field
 //     date        (required) YYYY-MM-DD — normalized to midnight UTC
 //     category    (required) enum EXPENSE_CATEGORIES
 //     description (required) string 2–255 chars
@@ -13,34 +14,37 @@
 //     date, category, description, amount — all optional, at least one required
 //     outletId + tenantId are IMMUTABLE — never send on update
 //
+// Working Outlet architecture:
+//   There is no outlet selector in this form at all. outletId always
+//   comes from useEffectiveOutletId() — the same single source of
+//   truth the Navbar's Outlet Switcher writes to. If no specific
+//   Working Outlet is selected ("All Outlets"), recording an expense
+//   is blocked entirely (nothing to assign it to).
+//
 // UX:
 //   amount     → <RupiahInput> (formatted display, raw integer to RHF)
-//   outletId   → <AsyncSearchSelect> backed by useOutlets()
 //   category   → <Select> with EXPENSE_CATEGORIES options
 
-import { useEffect, useState }                      from 'react'
-import { useForm, Controller }                      from 'react-hook-form'
+import { useEffect }                                from 'react'
+import { useForm }                                  from 'react-hook-form'
 import { zodResolver }                              from '@hookform/resolvers/zod'
 import { z }                                        from 'zod'
-import { Loader2 }                                  from 'lucide-react'
+import { Loader2, TriangleAlert }                   from 'lucide-react'
 
 import Modal                                        from '@/components/shared/Modal'
 import FormField, { Input, Select }                 from '@/components/shared/FormField'
-import AsyncSearchSelect                            from '@/components/shared/AsyncSearchSelect'
 import RupiahInput                                  from '@/components/shared/RupiahInput'
 import { useCreateExpense, useUpdateExpense }        from '../hooks/useExpenses'
 import { EXPENSE_CATEGORIES }                       from './ExpenseCategoryBadge'
-import { useOutlets }                               from '@/features/outlets/hooks/useOutlets'
+import { useEffectiveOutletId }                     from '@/store/activeOutletStore'
 import useToast                                     from '@/hooks/useToast'
-import useDebounce                                  from '@/hooks/useDebounce'
 import { cn }                                       from '@/lib/utils'
 
 // ── Zod schemas ───────────────────────────────────────────────
-
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i
+//
+// outletId is intentionally NOT a field here — see file header.
 
 const createSchema = z.object({
-  outletId: z.string().regex(OBJECT_ID_RE, 'Select a valid outlet'),
   date:     z.string().min(1, 'Date is required'),
   category: z.enum(EXPENSE_CATEGORIES, {
     required_error:  'Select a category',
@@ -86,7 +90,6 @@ const cleanPayload = (data) =>
 // ── Default values ────────────────────────────────────────────
 
 const getCreateDefaults = () => ({
-  outletId:    '',
   date:        today(),
   category:    '',
   description: '',
@@ -113,15 +116,11 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
   const isEdit = Boolean(expense)
   const toast  = useToast()
 
-  // Outlet search state — create mode only
-  const [outletSearch, setOutletSearch] = useState('')
-  const debouncedOutletSearch = useDebounce(outletSearch, 300)
-
-  const { data: outletsData, isLoading: outletsLoading } = useOutlets(
-    { search: debouncedOutletSearch, isActive: true, limit: 20 },
-    { enabled: open && !isEdit }
-  )
-  const outlets = outletsData?.data ?? []
+  // The single source of truth for outlet — no local outlet state, no
+  // form field, no AsyncSearchSelect. Same store the Navbar's Outlet
+  // Switcher writes to. null = "All Outlets".
+  const effectiveOutletId = useEffectiveOutletId()
+  const hasWorkingOutlet  = !!effectiveOutletId
 
   const createMutation = useCreateExpense()
   const updateMutation = useUpdateExpense()
@@ -144,14 +143,18 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
       reset(getEditDefaults(expense))
     } else {
       reset(getCreateDefaults())
-      setOutletSearch('')
     }
   }, [open, isEdit, expense, reset])
 
   const onSubmit = (data) => {
-    console.log(data)
+    // No Working Outlet selected ("All Outlets") — only relevant to
+    // CREATE, since outletId is immutable on update (never sent, per
+    // backend contract) and edit doesn't depend on it at all.
+    if (!isEdit && !hasWorkingOutlet) return
+
     const payload = cleanPayload(data)
     if (isEdit) {
+      // outletId is immutable on update — never sent, matches backend contract.
       updateMutation.mutate(
         { expenseId: expense._id, payload },
         {
@@ -160,7 +163,8 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
         }
       )
     } else {
-      createMutation.mutate(payload, {
+      // outletId always comes from the Working Outlet, never a form field.
+      createMutation.mutate({ ...payload, outletId: effectiveOutletId }, {
         onSuccess: () => { toast.success('Expense recorded successfully'); onClose() },
         onError:   (err) => toast.error('Failed to record expense', err?.response?.data?.message ?? 'Check your inputs'),
       })
@@ -182,33 +186,13 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="space-y-4">
 
-          {/* Outlet selector — create only (immutable on edit) */}
-          {!isEdit && (
-            <FormField label="Outlet" error={errors.outletId?.message} required>
-              <Controller
-                control={control}
-                name="outletId"
-                render={({ field }) => (
-                  <AsyncSearchSelect
-                    value={field.value}
-                    onChange={field.onChange}
-                    items={outlets}
-                    getLabel={(o) => o.name}
-                    getValue={(o) => o._id}
-                    onSearchChange={setOutletSearch}
-                    isLoading={outletsLoading}
-                    placeholder="Search outlets…"
-                    error={!!errors.outletId?.message}
-                    disabled={isPending}
-                    emptyMessage={
-                      debouncedOutletSearch
-                        ? `No outlets matching "${debouncedOutletSearch}"`
-                        : 'No active outlets found.'
-                    }
-                  />
-                )}
-              />
-            </FormField>
+          {/* No Working Outlet selected ("All Outlets") — only relevant
+              to create; outletId is immutable on update. */}
+          {!isEdit && !hasWorkingOutlet && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-sm text-amber-800 dark:text-amber-400">
+              <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>Select a specific outlet from the switcher above to record an expense.</span>
+            </div>
           )}
 
           {/* Date */}
@@ -272,7 +256,7 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
           </button>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || (!isEdit && !hasWorkingOutlet)}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
               'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',

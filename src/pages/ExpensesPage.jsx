@@ -21,9 +21,15 @@ import ExpenseTableSkeleton           from '@/features/expenses/components/Expen
 import ExpenseFormModal               from '@/features/expenses/components/ExpenseFormModal'
 import { EXPENSE_CATEGORIES, CATEGORY_CONFIG } from '@/features/expenses/components/ExpenseCategoryBadge'
 import { useExpenses }                from '@/features/expenses/hooks/useExpenses'
+import { useEffectiveOutletId }       from '@/store/activeOutletStore'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import { cn }                         from '@/lib/utils'
 
 const PAGE_SIZE = 20
+
+// Roles that can manage (create/edit/delete) expenses — mirrors backend's
+// MANAGE_EXPENSES grant (super_admin, tenant_admin, manager).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
 
 const today        = () => new Date().toISOString().split('T')[0]
 const thirtyDaysAgo = () => {
@@ -33,7 +39,7 @@ const thirtyDaysAgo = () => {
 // ── Category filter tabs ──────────────────────────────────────
 
 const CATEGORY_FILTERS = [
-  { label: 'All', value: '' },
+  { label: 'Semua', value: '' },
   ...EXPENSE_CATEGORIES.map((cat) => ({
     label: CATEGORY_CONFIG[cat]?.label ?? cat,
     value: cat,
@@ -43,11 +49,14 @@ const CATEGORY_FILTERS = [
 // ── Component ─────────────────────────────────────────────────
 
 const ExpensesPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
   const [page,            setPage]           = useState(1)
   const [categoryFilter,  setCategoryFilter] = useState('')
   const [startDate,       setStartDate]      = useState(thirtyDaysAgo())
   const [endDate,         setEndDate]        = useState(today())
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const resetPage = () => setPage(1)
 
@@ -68,6 +77,7 @@ const ExpensesPage = () => {
     category:  categoryFilter || undefined,
     startDate: startDate      || undefined,
     endDate:   endDate        || undefined,
+    outletId:  effectiveOutletId || undefined,
   })
 
   const expenses   = data?.data       ?? []
@@ -83,20 +93,22 @@ const ExpensesPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Expenses"
-          description="Track and manage all outlet expenses."
+          title="Pengeluaran"
+          description="Pantau dan kelola semua pengeluaran outlet."
         >
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <PlusCircle className="w-4 h-4" />
-            Record Expense
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <PlusCircle className="w-4 h-4" />
+              Catat Pengeluaran
+            </button>
+          )}
         </PageHeader>
 
         {/* Toolbar */}
@@ -125,7 +137,7 @@ const ExpensesPage = () => {
             {isFetching && !isLoading && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto shrink-0">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                Refreshing…
+                Memuat ulang…
               </div>
             )}
           </div>
@@ -133,7 +145,7 @@ const ExpensesPage = () => {
           {/* Row 2: Date range + page total */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Dari</label>
               <input
                 type="date"
                 value={startDate}
@@ -145,7 +157,7 @@ const ExpensesPage = () => {
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               />
-              <label className="text-xs text-muted-foreground">to</label>
+              <label className="text-xs text-muted-foreground">sampai</label>
               <input
                 type="date"
                 value={endDate}
@@ -161,7 +173,7 @@ const ExpensesPage = () => {
 
             {!isLoading && !isError && expenses.length > 0 && (
               <div className="sm:ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span>Page total:</span>
+                <span>Total halaman:</span>
                 <span className="font-semibold text-foreground tabular-nums">
                   {formatCurrency(pageTotal)}
                 </span>
@@ -177,10 +189,10 @@ const ExpensesPage = () => {
 
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load expenses"
+              title="Gagal memuat data pengeluaran"
               message={
                 error?.response?.data?.message
-                  ?? 'Could not reach the server. Check your connection.'
+                  ?? 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
               }
               onRetry={refetch}
             />
@@ -191,16 +203,18 @@ const ExpensesPage = () => {
               icon={<Receipt className="w-5 h-5 text-muted-foreground" />}
               title={
                 categoryFilter
-                  ? `No ${categoryFilter} expenses in this period`
-                  : 'No expense records found'
+                  ? `Belum ada pengeluaran ${categoryFilter} pada periode ini`
+                  : 'Belum ada data pengeluaran'
               }
               description={
                 categoryFilter
-                  ? 'Try a different category or adjust the date range.'
-                  : 'Adjust the date range or record your first expense.'
+                  ? 'Coba kategori lain atau sesuaikan rentang tanggal.'
+                  : canManage
+                  ? 'Sesuaikan rentang tanggal atau catat pengeluaran pertama Anda.'
+                  : 'Sesuaikan rentang tanggal untuk melihat pengeluaran lainnya.'
               }
               action={
-                !categoryFilter ? (
+                canManage && !categoryFilter ? (
                   <button
                     onClick={() => setCreateModalOpen(true)}
                     className={cn(
@@ -209,7 +223,7 @@ const ExpensesPage = () => {
                     )}
                   >
                     <PlusCircle className="w-4 h-4" />
-                    Record First Expense
+                    Catat Pengeluaran Pertama
                   </button>
                 ) : null
               }
@@ -218,7 +232,7 @@ const ExpensesPage = () => {
 
           {!isLoading && !isError && expenses.length > 0 && (
             <>
-              <ExpenseTable expenses={expenses} />
+              <ExpenseTable expenses={expenses} canManage={canManage} />
               <div className="px-4 py-3 border-t border-border">
                 <Pagination
                   page={pagination.page ?? page}

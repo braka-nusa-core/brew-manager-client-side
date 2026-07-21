@@ -28,7 +28,7 @@ import { cn }                        from '@/lib/utils'
 
 const fmt = (iso) => {
   if (!iso) return '—'
-  try { return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) }
+  try { return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
   catch { return '—' }
 }
 
@@ -78,20 +78,20 @@ const AccountTab = ({ user }) => {
   const [cpOpen, setCpOpen] = useState(false)
   return (
     <div className="space-y-4 max-w-xl">
-      <Section title="Profile" description="Your account information.">
-        <InfoRow label="Name"  value={user?.name} />
+      <Section title="Profil" description="Informasi akun Anda.">
+        <InfoRow label="Nama"  value={user?.name} />
         <InfoRow label="Email" value={user?.email} />
-        <InfoRow label="Role"  value={user?.role?.replace('_', ' ')} />
+        <InfoRow label="Peran"  value={user?.role?.replace('_', ' ')} />
       </Section>
 
-      <Section title="Security">
+      <Section title="Keamanan">
         <p className="text-sm text-muted-foreground">
-          Use a strong, unique password you don't use elsewhere.
+          Gunakan kata sandi yang kuat dan unik, yang tidak Anda gunakan di tempat lain.
         </p>
         <button onClick={() => setCpOpen(true)}
           className={cn('flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
             'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors')}>
-          <Lock className="w-3.5 h-3.5" />Change Password
+          <Lock className="w-3.5 h-3.5" />Ubah Kata Sandi
         </button>
       </Section>
 
@@ -116,8 +116,8 @@ const UpgradeRequestForm = ({ plans, currentPlanSlug }) => {
     submit.mutate(
       { toPlanId, reason: reason || undefined },
       {
-        onSuccess: () => { toast.success('Upgrade request submitted', 'We\'ll review it shortly.'); setToPlanId(''); setReason('') },
-        onError:   (err) => toast.error('Request failed', err?.response?.data?.message ?? 'Please try again.'),
+        onSuccess: () => { toast.success('Permintaan upgrade terkirim', 'Kami akan segera meninjaunya.'); setToPlanId(''); setReason('') },
+        onError:   (err) => toast.error('Permintaan gagal', err?.response?.data?.message ?? 'Silakan coba lagi.'),
       }
     )
   }
@@ -126,21 +126,21 @@ const UpgradeRequestForm = ({ plans, currentPlanSlug }) => {
     <form onSubmit={handleSubmit} className="space-y-3">
       <select value={toPlanId} onChange={(e) => setToPlanId(e.target.value)} disabled={submit.isPending}
         className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50">
-        <option value="">Select plan to upgrade to…</option>
+        <option value="">Pilih paket untuk upgrade…</option>
         {availablePlans.map((p) => (
           <option key={p._id} value={p._id}>
-            {p.name} — Rp {formatRupiah(p.price)}/month
+            {p.name} — Rp {formatRupiah(p.price)}/bulan
           </option>
         ))}
       </select>
       <textarea value={reason} onChange={(e) => setReason(e.target.value)} disabled={submit.isPending}
-        placeholder="Optional: tell us why you want to upgrade…" rows={2}
+        placeholder="Opsional: beri tahu kami alasan Anda ingin upgrade…" rows={2}
         className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50" />
       <button type="submit" disabled={!toPlanId || submit.isPending}
         className={cn('flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
           'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-60')}>
         {submit.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-        {submit.isPending ? 'Submitting…' : <><ChevronUp className="w-3.5 h-3.5" />Request Upgrade</>}
+        {submit.isPending ? 'Mengirim…' : <><ChevronUp className="w-3.5 h-3.5" />Ajukan Upgrade</>}
       </button>
     </form>
   )
@@ -156,7 +156,7 @@ const SubscriptionTab = () => {
   if (subLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
 
   if (!sub) return (
-    <div className="text-center py-12 text-muted-foreground text-sm">No subscription found. Contact support.</div>
+    <div className="text-center py-12 text-muted-foreground text-sm">Langganan tidak ditemukan. Hubungi dukungan.</div>
   )
 
   const plan   = sub.plan ?? {}
@@ -164,7 +164,7 @@ const SubscriptionTab = () => {
   return (
     <div className="space-y-4 max-w-2xl">
       {/* Current plan summary */}
-      <Section title="Current Plan">
+      <Section title="Paket Saat Ini">
         <div className="flex items-center gap-3 mb-3">
           <span className={cn('px-3 py-1 rounded-full text-sm font-bold capitalize',
             PLAN_BADGE[sub.planSlug] ?? 'bg-zinc-100 text-zinc-600')}>
@@ -175,23 +175,23 @@ const SubscriptionTab = () => {
             {sub.status}
           </span>
         </div>
-        <InfoRow label="Billing cycle" value={sub.billingCycle} />
-        <InfoRow label="Started"       value={fmt(sub.startedAt)} />
-        <InfoRow label="Expires"       value={sub.expiredAt ? fmt(sub.expiredAt) : 'No fixed expiry'} />
+        <InfoRow label="Siklus tagihan" value={sub.billingCycle} />
+        <InfoRow label="Dimulai"       value={fmt(sub.startedAt)} />
+        <InfoRow label="Berakhir"       value={sub.expiredAt ? fmt(sub.expiredAt) : 'Tidak ada masa berlaku tetap'} />
         {sub.maintenanceUntil && (
-          <InfoRow label="Maintenance until" value={fmt(sub.maintenanceUntil)} />
+          <InfoRow label="Maintenance hingga" value={fmt(sub.maintenanceUntil)} />
         )}
-        <InfoRow label="Auto-renew" value={sub.autoRenew ? 'Yes' : 'No'} />
+        <InfoRow label="Perpanjangan otomatis" value={sub.autoRenew ? 'Ya' : 'Tidak'} />
       </Section>
 
       {/* Limits */}
-      <Section title="Resource Limits" description="Effective limits include your plan base and any purchased add-ons.">
+      <Section title="Batas Sumber Daya" description="Batas efektif mencakup paket dasar Anda dan add-on yang dibeli.">
         {[
-          ['Outlets',   sub.effectiveLimits?.maxOutlets],
-          ['Employees', sub.effectiveLimits?.maxEmployees],
-          ['Admins',    sub.effectiveLimits?.maxAdmins],
-          ['Bikes',     sub.effectiveLimits?.maxBikes],
-          ['Products',  sub.effectiveLimits?.maxProducts],
+          ['Outlet',   sub.effectiveLimits?.maxOutlets],
+          ['Karyawan', sub.effectiveLimits?.maxEmployees],
+          ['Admin',    sub.effectiveLimits?.maxAdmins],
+          ['Sepeda',   sub.effectiveLimits?.maxBikes],
+          ['Produk',   sub.effectiveLimits?.maxProducts],
         ].map(([label, effective]) => (
           <div key={label} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-sm">
             <span className="text-muted-foreground">{label}</span>
@@ -202,7 +202,7 @@ const SubscriptionTab = () => {
 
       {/* Features */}
       {plan.features && (
-        <Section title="Feature Access">
+        <Section title="Akses Fitur">
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             {Object.entries(plan.features).map(([key, enabled]) => (
               <div key={key} className="flex items-center gap-1.5 text-xs py-1">
@@ -219,14 +219,14 @@ const SubscriptionTab = () => {
       )}
 
       {/* Upgrade request form */}
-      <Section title="Request Plan Upgrade"
-        description="Submit a request to upgrade your plan. Our team will review and respond.">
+      <Section title="Ajukan Upgrade Paket"
+        description="Kirim permintaan untuk meng-upgrade paket Anda. Tim kami akan meninjau dan merespons.">
         <UpgradeRequestForm plans={plans} currentPlanSlug={sub.planSlug} />
       </Section>
 
       {/* Upgrade request history */}
       {requests.length > 0 && (
-        <Section title="Upgrade Request History">
+        <Section title="Riwayat Permintaan Upgrade">
           {requests.map((r) => (
             <div key={r._id} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-sm">
               <div>
@@ -263,31 +263,31 @@ const AdminTab = () => {
 
   const handleTogglePlan = (planId) => {
     toggleMutation.mutate(planId, {
-      onSuccess: (p) => toast.success(`Plan ${p.isActive ? 'activated' : 'deactivated'}`),
-      onError:   (err) => toast.error('Failed', err?.response?.data?.message ?? 'Please try again.'),
+      onSuccess: (p) => toast.success(`Paket ${p.isActive ? 'diaktifkan' : 'dinonaktifkan'}`),
+      onError:   (err) => toast.error('Gagal', err?.response?.data?.message ?? 'Silakan coba lagi.'),
     })
   }
 
   const handleApprove = (requestId) => {
     approveMutation.mutate({ requestId, payload: {} }, {
-      onSuccess: () => toast.success('Upgrade request approved'),
-      onError:   (err) => toast.error('Failed', err?.response?.data?.message ?? 'Please try again.'),
+      onSuccess: () => toast.success('Permintaan upgrade disetujui'),
+      onError:   (err) => toast.error('Gagal', err?.response?.data?.message ?? 'Silakan coba lagi.'),
     })
   }
 
   const handleReject = (requestId) => {
     rejectMutation.mutate({ requestId, payload: {} }, {
-      onSuccess: () => toast.success('Upgrade request rejected'),
-      onError:   (err) => toast.error('Failed', err?.response?.data?.message ?? 'Please try again.'),
+      onSuccess: () => toast.success('Permintaan upgrade ditolak'),
+      onError:   (err) => toast.error('Gagal', err?.response?.data?.message ?? 'Silakan coba lagi.'),
     })
   }
 
   return (
     <div className="space-y-4">
       {/* Plans */}
-      <Section title="Plans" description="Manage subscription plans available to tenants.">
+      <Section title="Paket" description="Kelola paket langganan yang tersedia untuk tenant.">
         {plans.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No plans found.</p>
+          <p className="text-sm text-muted-foreground">Tidak ada paket ditemukan.</p>
         ) : (
           <div className="space-y-2">
             {plans.map((plan) => (
@@ -301,16 +301,16 @@ const AdminTab = () => {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Rp {formatRupiah(plan.price ?? 0)}/month
-                    {' · '}{limitDisplay(plan.limits?.maxOutlets)} outlets
-                    {' · '}{limitDisplay(plan.limits?.maxEmployees)} employees
-                    {' · '}{limitDisplay(plan.limits?.maxAdmins)} admins
+                    Rp {formatRupiah(plan.price ?? 0)}/bulan
+                    {' · '}{limitDisplay(plan.limits?.maxOutlets)} outlet
+                    {' · '}{limitDisplay(plan.limits?.maxEmployees)} karyawan
+                    {' · '}{limitDisplay(plan.limits?.maxAdmins)} admin
                   </p>
                 </div>
                 <button
                   onClick={() => handleTogglePlan(plan._id)}
                   disabled={toggleMutation.isPending}
-                  title={plan.isActive ? 'Deactivate' : 'Activate'}
+                  title={plan.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                   className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50">
                   {plan.isActive
                     ? <ToggleRight className="w-5 h-5 text-brand-500" />
@@ -323,10 +323,10 @@ const AdminTab = () => {
       </Section>
 
       {/* Pending upgrade requests */}
-      <Section title={`Pending Upgrade Requests ${pending.length > 0 ? `(${pending.length})` : ''}`}
-        description="Review and action upgrade requests from tenants.">
+      <Section title={`Permintaan Upgrade Tertunda ${pending.length > 0 ? `(${pending.length})` : ''}`}
+        description="Tinjau dan tindak lanjuti permintaan upgrade dari tenant.">
         {pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending requests.</p>
+          <p className="text-sm text-muted-foreground">Tidak ada permintaan tertunda.</p>
         ) : (
           <div className="space-y-2">
             {pending.map((req) => (
@@ -346,13 +346,13 @@ const AdminTab = () => {
                     className={cn('flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-md',
                       'bg-emerald-500 hover:bg-emerald-600 text-white transition-colors disabled:opacity-60')}>
                     {approveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                    Approve
+                    Setujui
                   </button>
                   <button onClick={() => handleReject(req._id)}
                     disabled={approveMutation.isPending || rejectMutation.isPending}
                     className={cn('flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-md',
                       'border border-destructive text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60')}>
-                    <X className="w-3 h-3" />Reject
+                    <X className="w-3 h-3" />Tolak
                   </button>
                 </div>
               </div>
@@ -371,9 +371,9 @@ const SettingsPage = () => {
   const role = user?.role
 
   const tabs = [
-    { key: 'account',      label: 'Account',      icon: Lock,        roles: null }, // all
-    { key: 'subscription', label: 'Subscription',  icon: CreditCard,  roles: ['tenant_admin'] },
-    { key: 'admin',        label: 'Admin Panel',   icon: Shield,      roles: ['super_admin'] },
+    { key: 'account',      label: 'Akun',          icon: Lock,        roles: null }, // all
+    { key: 'subscription', label: 'Langganan',     icon: CreditCard,  roles: ['tenant_admin'] },
+    { key: 'admin',        label: 'Panel Admin',   icon: Shield,      roles: ['super_admin'] },
   ].filter((t) => !t.roles || t.roles.includes(role))
 
   const [activeTab, setActiveTab] = useState('account')
@@ -381,8 +381,8 @@ const SettingsPage = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your account and subscription.</p>
+        <h1 className="text-2xl font-bold text-foreground">Pengaturan</h1>
+        <p className="text-sm text-muted-foreground mt-1">Kelola akun dan langganan Anda.</p>
       </div>
 
       {/* Tab switcher */}

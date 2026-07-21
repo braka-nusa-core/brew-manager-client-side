@@ -103,10 +103,11 @@ const CalcRow = ({ label, value, muted, bold, positive, negative }) => (
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
- *   payroll: Object | null
+ *   payroll: Object | null,
+ *   canManage: boolean   — whether the current role may approve/reject/adjust/mark-paid
  * }} props
  */
-const PayrollDetailModal = ({ open, onClose, payroll }) => {
+const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
   const toast          = useToast()
   const approveMutation = useApprovePayroll()
   const rejectMutation  = useRejectPayroll()
@@ -261,8 +262,8 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
             </div>
           </div>
 
-          {/* Adjust form — only for draft/approved */}
-          {!isPaid && showAdjust && (
+          {/* Adjust form — only for draft/approved, and only for managing roles */}
+          {canManage && !isPaid && showAdjust && (
             <form onSubmit={handleSubmit(onAdjustSubmit)} noValidate>
               <div className="p-3 rounded-lg border border-border bg-muted/20 space-y-3">
                 <p className="text-xs font-semibold text-foreground">Adjust Values</p>
@@ -323,8 +324,8 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
 
             {/* Left: secondary actions */}
             <div className="flex items-center gap-2">
-              {/* Adjust — draft or approved only */}
-              {!isPaid && !showAdjust && (
+              {/* Adjust — draft or approved only, managing roles only */}
+              {canManage && !isPaid && !showAdjust && (
                 <button
                   onClick={() => setShowAdjust(true)}
                   disabled={anyPending}
@@ -335,8 +336,8 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
                 </button>
               )}
 
-              {/* Reject — approved only */}
-              {isApproved && (
+              {/* Reject — approved only, managing roles only */}
+              {canManage && isApproved && (
                 <button
                   onClick={handleReject}
                   disabled={anyPending}
@@ -360,8 +361,8 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
                 Close
               </button>
 
-              {/* Approve — draft only */}
-              {isDraft && (
+              {/* Approve — draft only, managing roles only */}
+              {canManage && isDraft && (
                 <button
                   onClick={handleApprove}
                   disabled={anyPending}
@@ -375,8 +376,8 @@ const PayrollDetailModal = ({ open, onClose, payroll }) => {
                 </button>
               )}
 
-              {/* Mark Paid — approved only */}
-              {isApproved && (
+              {/* Mark Paid — approved only, managing roles only */}
+              {canManage && isApproved && (
                 <button
                   onClick={handleMarkPaid}
                   disabled={anyPending}

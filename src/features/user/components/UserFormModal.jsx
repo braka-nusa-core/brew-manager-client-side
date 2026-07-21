@@ -112,9 +112,13 @@ const UserFormModal = ({ open, onClose, user = null }) => {
         onError:   (err) => {
           const status = err?.response?.status
           const msg    = err?.response?.data?.message ?? 'Please try again'
+          // Backend returns 403 for both role-escalation and plan-limit
+          // rejections (checkPlanLimit never returns 429) — distinguish
+          // using the message text, which is the only differentiator.
+          const isPlanLimit = status === 403 && /plan limit reached/i.test(msg)
           const title  = status === 409 ? 'Email already in use'
-                       : status === 403 ? 'Permission denied'
-                       : status === 429 ? 'Plan limit reached'
+                       : isPlanLimit     ? 'Plan limit reached'
+                       : status === 403  ? 'Permission denied'
                        : 'Failed to create user'
           toast.error(title, msg)
         },

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import { useAuthStore, selectUser }    from '@/store/authStore'
+import { useEffectiveOutletId }        from '@/store/activeOutletStore'
 import {
   useDashboardSummary, useSalesTrend, useExpenseTrend,
   useAttendanceSummary, useEmployeePerformance,
@@ -52,11 +53,11 @@ const fmtShort = (n) => {
 }
 
 const fmtDateShort = (s) =>
-  new Date(s).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+  new Date(s).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
 
 const greeting = () => {
   const h = new Date().getHours()
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+  return h < 12 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam'
 }
 const getInitials = (n = '') =>
   n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -98,7 +99,7 @@ const TrendChart = ({ salesData, expData, isLoading }) => {
 
   if (!allDates.length) return (
     <div className="flex items-center justify-center text-sm text-zinc-400" style={{ height: 300 }}>
-      No data available for this period
+      Belum ada data untuk periode ini
     </div>
   )
 
@@ -204,11 +205,11 @@ const Sparkline = ({ data, color, valueKey, isLoading }) => {
 // ─── Attendance Donut ─────────────────────────────────────────
 
 const STATUSES = [
-  { key: 'present', label: 'Present',  color: '#22c55e' },
-  { key: 'late',    label: 'Late',     color: '#f59e0b' },
-  { key: 'leave',   label: 'On Leave', color: '#3b82f6' },
-  { key: 'absent',  label: 'Absent',   color: '#f43f5e' },
-  { key: 'holiday', label: 'Holiday',  color: '#a855f7' },
+  { key: 'present', label: 'Hadir',    color: '#22c55e' },
+  { key: 'late',    label: 'Terlambat',color: '#f59e0b' },
+  { key: 'leave',   label: 'Izin',     color: '#3b82f6' },
+  { key: 'absent',  label: 'Absen',    color: '#f43f5e' },
+  { key: 'holiday', label: 'Libur',    color: '#a855f7' },
 ]
 
 const AttendanceDonut = ({ data, isLoading }) => {
@@ -225,7 +226,7 @@ const AttendanceDonut = ({ data, isLoading }) => {
   if (!data || total === 0) return (
     <div className="flex flex-col items-center justify-center h-40 gap-2">
       <BarChart3 className="w-8 h-8 text-zinc-200" />
-      <p className="text-xs text-zinc-400">No attendance records</p>
+      <p className="text-xs text-zinc-400">Belum ada data absensi</p>
     </div>
   )
 
@@ -260,7 +261,7 @@ const AttendanceDonut = ({ data, isLoading }) => {
           <span className="text-xl font-bold text-zinc-900 leading-none">
             {data.attendanceRate?.toFixed(0)}%
           </span>
-          <span className="text-[10px] text-zinc-400 mt-0.5">on time</span>
+          <span className="text-[10px] text-zinc-400 mt-0.5">tepat waktu</span>
         </div>
       </div>
 
@@ -427,7 +428,7 @@ const PodiumCard = ({ emp, idx, maxRev }) => {
 
       {/* Revenue — big number */}
       <div>
-        <p className="text-[11px] text-zinc-400 font-medium mb-0.5">Revenue</p>
+        <p className="text-[11px] text-zinc-400 font-medium mb-0.5">Pendapatan</p>
         <p className="text-xl font-bold text-zinc-900 tabular-nums tracking-tight">
           {fmtShort(emp.totalRevenue)}
         </p>
@@ -452,7 +453,7 @@ const PodiumCard = ({ emp, idx, maxRev }) => {
       {/* Progress bar */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] text-zinc-400">vs top performer</span>
+          <span className="text-[10px] text-zinc-400">vs performa terbaik</span>
           <span className="text-[10px] font-semibold text-zinc-600">{pct}%</span>
         </div>
         <div className="h-1.5 rounded-full bg-white/60 overflow-hidden">
@@ -538,7 +539,7 @@ const Leaderboard = ({ data, isLoading }) => {
   if (!data?.length) return (
     <div className="flex flex-col items-center justify-center h-48 gap-3">
       <Activity className="w-10 h-10 text-zinc-200" />
-      <p className="text-sm text-zinc-400">No performance data for this period</p>
+      <p className="text-sm text-zinc-400">Belum ada data performa untuk periode ini</p>
     </div>
   )
 
@@ -577,9 +578,13 @@ const Leaderboard = ({ data, isLoading }) => {
 const DashboardPage = () => {
   const user = useAuthStore(selectUser)
   const [rangeIdx, setRangeIdx] = useState(1)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const { startDate, endDate } = getRange(RANGES[rangeIdx].days)
-  const params = useMemo(() => ({ startDate, endDate }), [startDate, endDate])
+  const params = useMemo(
+    () => ({ startDate, endDate, outletId: effectiveOutletId || undefined }),
+    [startDate, endDate, effectiveOutletId]
+  )
 
   const { data: summary, isLoading: lSum  } = useDashboardSummary(params)
   const { data: salesTr, isLoading: lSale } = useSalesTrend(params)
@@ -606,10 +611,10 @@ const DashboardPage = () => {
         <div>
           <h1 className="text-xl font-bold text-zinc-900">
             {greeting()},{' '}
-            <span className="text-lime-600">{user?.name?.split(' ')[0] ?? 'there'}</span> 👋
+            <span className="text-lime-600">{user?.name?.split(' ')[0] ?? 'Anda'}</span> 👋
           </h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {new Date().toLocaleDateString('en-GB', {
+            {new Date().toLocaleDateString('id-ID', {
               weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
             })}
           </p>
@@ -648,7 +653,7 @@ const DashboardPage = () => {
             <>
               <div className="flex items-start justify-between mb-1">
                 <div>
-                  <p className="text-sm font-medium text-zinc-400">Total Revenue</p>
+                  <p className="text-sm font-medium text-zinc-400">Total Pendapatan</p>
                   <p className="text-3xl font-bold text-zinc-900 mt-1 tracking-tight">
                     {fmtShort(summary?.totalRevenue)}
                   </p>
@@ -674,7 +679,7 @@ const DashboardPage = () => {
             <>
               <div className="flex items-start justify-between mb-1">
                 <div>
-                  <p className="text-sm font-medium text-zinc-400">Total Expenses</p>
+                  <p className="text-sm font-medium text-zinc-400">Total Pengeluaran</p>
                   <p className="text-3xl font-bold text-zinc-900 mt-1 tracking-tight">
                     {fmtShort(summary?.totalExpense)}
                   </p>
@@ -705,7 +710,7 @@ const DashboardPage = () => {
             <>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="text-sm font-medium text-white/70">Net Profit</p>
+                  <p className="text-sm font-medium text-white/70">Laba Bersih</p>
                   <p className="text-3xl font-bold text-white mt-1 tracking-tight">
                     {fmtShort(summary?.netProfit)}
                   </p>
@@ -716,8 +721,8 @@ const DashboardPage = () => {
               </div>
               <span className="inline-flex items-center gap-1.5 bg-white/25 text-white text-xs font-bold px-3 py-1.5 rounded-full">
                 {profitable
-                  ? <><ArrowUpRight size={12} /> Profitable</>
-                  : <><ArrowDownRight size={12} /> Operating at loss</>
+                  ? <><ArrowUpRight size={12} /> Untung</>
+                  : <><ArrowDownRight size={12} /> Rugi</>
                 }
               </span>
             </>
@@ -728,34 +733,34 @@ const DashboardPage = () => {
       {/* ── Secondary KPI cards ───────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Cups Sold" icon={Coffee} color="amber"
+          label="Cup Terjual" icon={Coffee} color="amber"
           value={summary?.totalCups != null
             ? summary.totalCups.toLocaleString('id-ID') : '—'}
-          sub="this period" isLoading={lSum}
+          sub="periode ini" isLoading={lSum}
         />
         <StatCard
-          label="Active Employees" icon={Users} color="blue"
+          label="Karyawan Aktif" icon={Users} color="blue"
           value={summary?.totalEmployees != null
             ? String(summary.totalEmployees) : '—'}
-          sub="in your scope" isLoading={lSum}
+          sub="dalam cakupan Anda" isLoading={lSum}
         />
         <StatCard
-          label="Attendance Rate" icon={Activity}
+          label="Tingkat Kehadiran" icon={Activity}
           color={(summary?.attendanceRate ?? 0) >= 80 ? 'green'
                : (summary?.attendanceRate ?? 0) >= 60 ? 'amber' : 'red'}
           value={summary?.attendanceRate != null
             ? `${summary.attendanceRate}%` : '—'}
           trend={(summary?.attendanceRate ?? 0) >= 80 ? 'up'
                : (summary?.attendanceRate ?? 0) >= 60 ? 'neutral' : 'down'}
-          trendVal={(summary?.attendanceRate ?? 0) >= 80 ? 'On track'
-                  : (summary?.attendanceRate ?? 0) >= 60 ? 'Moderate' : 'Low'}
+          trendVal={(summary?.attendanceRate ?? 0) >= 80 ? 'Baik'
+                  : (summary?.attendanceRate ?? 0) >= 60 ? 'Cukup' : 'Rendah'}
           isLoading={lSum}
         />
         <StatCard
-          label="Attendance Records" icon={BarChart3} color="violet"
+          label="Data Absensi" icon={BarChart3} color="violet"
           value={att?.total != null
             ? att.total.toLocaleString('id-ID') : '—'}
-          sub="total entries" isLoading={lAtt}
+          sub="total entri" isLoading={lAtt}
         />
       </div>
 
@@ -766,13 +771,13 @@ const DashboardPage = () => {
         <div className="lg:col-span-2 bg-white rounded-2xl border border-zinc-100 shadow-sm pt-5 px-5 pb-3">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-zinc-900">Revenue vs Expenses</h3>
+              <h3 className="text-base font-semibold text-zinc-900">Pendapatan vs Pengeluaran</h3>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Daily · last {RANGES[rangeIdx].days} days
+                Harian · {RANGES[rangeIdx].days} hari terakhir
               </p>
             </div>
             <div className="flex items-center gap-2.5">
-              {[{ color: '#84cc16', label: 'Revenue' }, { color: '#f43f5e', label: 'Expense' }].map(({ color, label }) => (
+              {[{ color: '#84cc16', label: 'Pendapatan' }, { color: '#f43f5e', label: 'Pengeluaran' }].map(({ color, label }) => (
                 <div key={label} className="flex items-center gap-1.5 bg-zinc-50 rounded-lg px-2.5 py-1">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-xs font-medium text-zinc-500">{label}</span>
@@ -786,9 +791,9 @@ const DashboardPage = () => {
         {/* Attendance donut — 1 col */}
         <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
           <div className="mb-5">
-            <h3 className="text-base font-semibold text-zinc-900">Attendance</h3>
+            <h3 className="text-base font-semibold text-zinc-900">Absensi</h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Status breakdown · {RANGES[rangeIdx].label}
+              Rincian status · {RANGES[rangeIdx].label}
             </p>
           </div>
           <AttendanceDonut data={att} isLoading={lAtt} />
@@ -799,15 +804,15 @@ const DashboardPage = () => {
       <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-base font-semibold text-zinc-900">Top Performers</h3>
+            <h3 className="text-base font-semibold text-zinc-900">Karyawan Terbaik</h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Ranked by revenue · last {RANGES[rangeIdx].days} days
+              Diurutkan berdasarkan pendapatan · {RANGES[rangeIdx].days} hari terakhir
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 bg-zinc-50 rounded-xl px-3 py-1.5">
               <Coffee size={12} className="text-zinc-400" />
-              <span className="text-xs text-zinc-500 font-medium">Cups · Days shown</span>
+              <span className="text-xs text-zinc-500 font-medium">Cup · Hari ditampilkan</span>
             </div>
           </div>
         </div>

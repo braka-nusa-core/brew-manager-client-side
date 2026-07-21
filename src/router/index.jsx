@@ -4,21 +4,34 @@
 //
 // Structure:
 //   /login             → AuthLayout → LoginPage  (public)
-//   /                  → ProtectedRoute
+//   /                  → ProtectedRoute (auth + permission guard)
 //     /dashboard       → DashboardLayout → DashboardPage
-//     /employees       → DashboardLayout → (future)
-//     /attendance      → DashboardLayout → (future)
-//     /sales           → DashboardLayout → (future)
-//     /expenses        → DashboardLayout → (future)
-//     /payroll         → DashboardLayout → (future)
-//     /outlets         → DashboardLayout → (future)
+//     /employees       → DashboardLayout → EmployeesPage
+//     /attendance      → DashboardLayout → AttendancePage
+//     /sales           → DashboardLayout → SalesPage
+//     /expenses        → DashboardLayout → ExpensesPage
+//     /payroll         → DashboardLayout → PayrollPage
+//     /outlets         → DashboardLayout → OutletsPage
 //     /products        → DashboardLayout → ProductsPage
 //     /raw-materials   → DashboardLayout → RawMaterialsPage
-//     /settings        → DashboardLayout → (future)
+//     /cup-records     → DashboardLayout → CupRecordsPage
+//     /bikes           → DashboardLayout → BikesPage
+//     /bike-assignments→ DashboardLayout → BikeAssignmentsPage
+//     /bike-maintenance→ DashboardLayout → BikeMaintenancePage
+//     /users           → DashboardLayout → UsersPage
+//     /settings        → DashboardLayout → SettingsPage
 //   *                  → NotFoundPage
 //
-// Future modules are scaffolded as placeholder pages.
-// This ensures the sidebar navigation links work immediately.
+// Permission-aware routing (Sprint 4):
+//   Which role can VIEW each of the routes above is defined in
+//   router/routeAccess.js (ROUTE_PERMISSIONS), NOT here — this file
+//   only defines the route TREE (paths → components). ProtectedRoute
+//   reads routeAccess.js and renders AccessDeniedPage instead of the
+//   requested route when the current role lacks the required
+//   permission. Sidebar.jsx reads the same routeAccess.js to decide
+//   which nav links to even show, so there is exactly one place
+//   (routeAccess.js) that defines route-level access, consumed by
+//   both the guard and the navigation — no duplicated role checks.
 // ============================================================
 
 import { createBrowserRouter, Navigate } from 'react-router-dom'

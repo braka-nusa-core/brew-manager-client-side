@@ -77,7 +77,7 @@ const RowActions = ({ record, onEdit }) => {
 
 // ── RepairRecordsTable ─────────────────────────────────────────
 
-const RepairRecordsTable = ({ records }) => {
+const RepairRecordsTable = ({ records, canManage }) => {
   const [editTarget, setEditTarget] = useState(null)
 
   return (
@@ -90,7 +90,7 @@ const RepairRecordsTable = ({ records }) => {
             <DataTable.HeadCell>Cost</DataTable.HeadCell>
             <DataTable.HeadCell>Status</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden lg:table-cell">Notes</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-10" />
+            {canManage && <DataTable.HeadCell className="w-10" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -133,9 +133,11 @@ const RepairRecordsTable = ({ records }) => {
                   )}
                 </DataTable.Cell>
 
-                <DataTable.Cell>
-                  <RowActions record={record} onEdit={setEditTarget} />
-                </DataTable.Cell>
+                {canManage && (
+                  <DataTable.Cell>
+                    <RowActions record={record} onEdit={setEditTarget} />
+                  </DataTable.Cell>
+                )}
               </DataTable.Row>
             )
           })}

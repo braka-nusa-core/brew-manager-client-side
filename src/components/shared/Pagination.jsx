@@ -56,8 +56,8 @@ const Pagination = ({
       {/* Count */}
       <p className="text-xs text-muted-foreground shrink-0">
         {total === 0
-          ? 'No results'
-          : `Showing ${from}–${to} of ${total}`
+          ? 'Tidak ada hasil'
+          : `Menampilkan ${from}–${to} dari ${total}`
         }
       </p>
 
@@ -72,7 +72,7 @@ const Pagination = ({
             'text-sm transition-colors',
             'hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed'
           )}
-          aria-label="Previous page"
+          aria-label="Halaman sebelumnya"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -109,7 +109,7 @@ const Pagination = ({
             'text-sm transition-colors',
             'hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed'
           )}
-          aria-label="Next page"
+          aria-label="Halaman berikutnya"
         >
           <ChevronRight className="w-4 h-4" />
         </button>

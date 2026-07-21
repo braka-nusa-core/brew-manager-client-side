@@ -17,18 +17,28 @@ import EmployeeTable          from '@/features/employee/components/EmployeeTable
 import EmployeeTableSkeleton  from '@/features/employee/components/EmployeeTableSkeleton'
 import EmployeeFormModal      from '@/features/employee/components/EmployeeFormModal'
 import { useEmployees }       from '@/features/employee/hooks/useEmployees'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
+import { useEffectiveOutletId } from '@/store/activeOutletStore'
 import useDebounce            from '@/hooks/useDebounce'
 import { cn }                 from '@/lib/utils'
 
 const PAGE_SIZE = 15
 
+// Roles that can manage (create/edit/toggle/remove) employees — mirrors
+// backend's MANAGE_EMPLOYEES grant (super_admin, tenant_admin, manager).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
+
 const STATUS_FILTERS = [
-  { label: 'All',      value: undefined },
-  { label: 'Active',   value: 'true'    },
-  { label: 'Inactive', value: 'false'   },
+  { label: 'Semua',      value: undefined },
+  { label: 'Aktif',      value: 'true'    },
+  { label: 'Tidak Aktif',value: 'false'   },
 ]
 
 const EmployeesPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
+  const effectiveOutletId = useEffectiveOutletId()
+
   // ── State ──────────────────────────────────────────────────
   const [page,            setPage]            = useState(1)
   const [search,          setSearch]          = useState('')
@@ -60,6 +70,7 @@ const EmployeesPage = () => {
     limit:    PAGE_SIZE,
     search:   debouncedSearch || undefined,
     isActive: statusFilter,
+    outletId: effectiveOutletId || undefined,
   })
 
   const employees  = data?.data       ?? []
@@ -73,20 +84,22 @@ const EmployeesPage = () => {
 
         {/* Header */}
         <PageHeader
-          title="Employees"
-          description="Manage your team members across all outlets."
+          title="Karyawan"
+          description="Kelola anggota tim Anda di semua outlet."
         >
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <UserPlus className="w-4 h-4" />
-            Add Employee
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <UserPlus className="w-4 h-4" />
+              Tambah Karyawan
+            </button>
+          )}
         </PageHeader>
 
         {/* Toolbar */}
@@ -96,7 +109,7 @@ const EmployeesPage = () => {
           <SearchInput
             value={search}
             onChange={handleSearch}
-            placeholder="Search by name..."
+            placeholder="Cari berdasarkan nama..."
             className="w-full sm:w-72"
             disabled={isLoading}
           />
@@ -123,7 +136,7 @@ const EmployeesPage = () => {
           {isFetching && !isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              Refreshing…
+              Memuat ulang…
             </div>
           )}
         </div>
@@ -139,10 +152,10 @@ const EmployeesPage = () => {
           {/* ── Error state ─────────────────────────────────── */}
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load employees"
+              title="Gagal memuat data karyawan"
               message={
                 error?.response?.data?.message
-                ?? 'Could not reach the server. Check your connection.'
+                ?? 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
               }
               onRetry={refetch}
             />
@@ -154,20 +167,22 @@ const EmployeesPage = () => {
               icon={<Users className="w-5 h-5 text-muted-foreground" />}
               title={
                 debouncedSearch
-                  ? `No employees found for "${debouncedSearch}"`
+                  ? `Tidak ada karyawan untuk "${debouncedSearch}"`
                   : statusFilter === 'false'
-                  ? 'No inactive employees'
-                  : 'No employees yet'
+                  ? 'Tidak ada karyawan tidak aktif'
+                  : 'Belum ada karyawan'
               }
               description={
                 debouncedSearch
-                  ? 'Try a different search term or clear the filter.'
+                  ? 'Coba kata kunci lain atau hapus filter.'
                   : statusFilter
-                  ? 'Change the status filter to see other employees.'
-                  : 'Add your first employee to get started.'
+                  ? 'Ubah filter status untuk melihat karyawan lainnya.'
+                  : canManage
+                  ? 'Tambahkan karyawan pertama Anda untuk memulai.'
+                  : 'Belum ada karyawan yang ditambahkan.'
               }
               action={
-                !debouncedSearch && !statusFilter ? (
+                canManage && !debouncedSearch && !statusFilter ? (
                   <button
                     onClick={() => setCreateModalOpen(true)}
                     className={cn(
@@ -176,7 +191,7 @@ const EmployeesPage = () => {
                     )}
                   >
                     <UserPlus className="w-4 h-4" />
-                    Add First Employee
+                    Tambah Karyawan Pertama
                   </button>
                 ) : null
               }
@@ -186,7 +201,7 @@ const EmployeesPage = () => {
           {/* ── Data table ──────────────────────────────────── */}
           {!isLoading && !isError && employees.length > 0 && (
             <>
-              <EmployeeTable employees={employees} />
+              <EmployeeTable employees={employees} canManage={canManage} />
 
               {/* Pagination */}
               <div className="px-4 py-3 border-t border-border">

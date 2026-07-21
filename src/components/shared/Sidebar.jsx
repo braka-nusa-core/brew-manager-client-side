@@ -8,10 +8,20 @@
 //   - Collapsed state shows icons only with tooltip labels.
 //   - Mobile: renders as a drawer overlay.
 //   - Collapsible state managed by parent (DashboardLayout).
+//
+// Permission-aware navigation (Sprint 4):
+//   NAV_ITEMS are filtered against ROUTE_PERMISSIONS (routeAccess.js)
+//   using the current role — a nav link is only rendered if the role
+//   actually holds the VIEW permission for that route. This is the
+//   same map ProtectedRoute uses to guard the route itself, so the
+//   Sidebar can never show a link that would lead to Access Denied.
 // ============================================================
 
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
+import { hasPermission } from '@/constants/permissions'
+import { ROUTE_PERMISSIONS } from '@/router/routeAccess'
 import {
   LayoutDashboard,
   Users,
@@ -32,21 +42,21 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { path: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
-  { path: '/employees',  label: 'Employees',  icon: Users },
-  { path: '/attendance', label: 'Attendance', icon: ClipboardCheck },
-  { path: '/sales',      label: 'Sales',      icon: TrendingUp },
-  { path: '/expenses',   label: 'Expenses',   icon: Receipt },
-  { path: '/payroll',    label: 'Payroll',    icon: Banknote },
-  { path: '/outlets',    label: 'Outlets',    icon: Store },
-  { path: '/products',   label: 'Products',   icon: Package },
-  { path: '/raw-materials', label: 'Raw Materials', icon: Beaker },
-  { path: '/cup-records', label: 'Cup Records',   icon: Coffee },
-  { path: '/bikes',            label: 'Bikes',             icon: Bike },
-  { path: '/bike-assignments', label: 'Bike Assignments',  icon: UserCheck },
-  { path: '/bike-maintenance', label: 'Bike Maintenance',  icon: Wrench },
-  { path: '/users',            label: 'Users',             icon: KeyRound },
-  { path: '/settings',         label: 'Settings',          icon: Settings },
+  { path: '/dashboard',  label: 'Dasbor',              icon: LayoutDashboard },
+  { path: '/employees',  label: 'Karyawan',            icon: Users },
+  { path: '/attendance', label: 'Absensi',             icon: ClipboardCheck },
+  { path: '/sales',      label: 'Penjualan',           icon: TrendingUp },
+  { path: '/expenses',   label: 'Pengeluaran',         icon: Receipt },
+  { path: '/payroll',    label: 'Penggajian',          icon: Banknote },
+  { path: '/outlets',    label: 'Outlet',              icon: Store },
+  { path: '/products',   label: 'Produk',              icon: Package },
+  { path: '/raw-materials', label: 'Bahan Baku',       icon: Beaker },
+  { path: '/cup-records', label: 'Catatan Cup',        icon: Coffee },
+  { path: '/bikes',            label: 'Sepeda',             icon: Bike },
+  { path: '/bike-assignments', label: 'Penugasan Sepeda',   icon: UserCheck },
+  { path: '/bike-maintenance', label: 'Perawatan Sepeda',   icon: Wrench },
+  { path: '/users',            label: 'Pengguna',           icon: KeyRound },
+  { path: '/settings',         label: 'Pengaturan',         icon: Settings },
 ]
 
 /**
@@ -56,6 +66,15 @@ const NAV_ITEMS = [
  */
 const Sidebar = ({ collapsed, onToggle }) => {
   const location = useLocation()
+  const role     = useAuthStore(selectUserRole)
+
+  // A nav item with no entry in ROUTE_PERMISSIONS (e.g. /settings) is
+  // shown to everyone — same "unrestricted by default" rule ProtectedRoute
+  // uses, so Sidebar and the route guard never disagree.
+  const visibleItems = NAV_ITEMS.filter(({ path }) => {
+    const required = ROUTE_PERMISSIONS[path]
+    return !required || hasPermission(role, required)
+  })
 
   return (
     <aside
@@ -87,7 +106,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
       {/* ── Navigation ────────────────────────────────────────── */}
       <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden">
         <ul className="space-y-0.5 px-2">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+          {visibleItems.map(({ path, label, icon: Icon }) => {
             const isActive = location.pathname === path ||
               (path !== '/dashboard' && location.pathname.startsWith(path))
 
@@ -128,13 +147,13 @@ const Sidebar = ({ collapsed, onToggle }) => {
             'hover:bg-white/5 hover:text-white transition-colors text-sm',
             collapsed && 'justify-center'
           )}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
         >
           <ChevronLeft className={cn(
             'w-4 h-4 transition-transform duration-300',
             collapsed && 'rotate-180'
           )} />
-          {!collapsed && <span>Collapse</span>}
+          {!collapsed && <span>Ciutkan</span>}
         </button>
       </div>
     </aside>

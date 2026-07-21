@@ -22,15 +22,15 @@ import { cn }                from '@/lib/utils'
 const PAGE_SIZE = 15
 
 const ROLE_FILTER_OPTIONS = [
-  { value: '',             label: 'All Roles' },
+  { value: '',             label: 'Semua Peran' },
   ...CREATABLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
-  { value: 'tenant_admin', label: 'Tenant Admin' },
+  { value: 'tenant_admin', label: 'Admin Tenant' },
 ]
 
 const ACTIVE_FILTERS = [
-  { label: 'Active',   value: 'true'      },
-  { label: 'All',      value: undefined   },
-  { label: 'Inactive', value: 'false'     },
+  { label: 'Aktif',       value: 'true'      },
+  { label: 'Semua',       value: undefined   },
+  { label: 'Tidak Aktif', value: 'false'     },
 ]
 
 const UsersPage = () => {
@@ -58,18 +58,18 @@ const UsersPage = () => {
   return (
     <>
       <div>
-        <PageHeader title="Users" description="Manage login accounts for managers, cashiers, and viewers.">
+        <PageHeader title="Pengguna" description="Kelola akun login untuk manajer, kasir, dan viewer.">
           <button onClick={() => setCreateModalOpen(true)}
             className={cn('inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
               'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors')}>
-            <PlusCircle className="w-4 h-4" />Create User
+            <PlusCircle className="w-4 h-4" />Tambah Pengguna
           </button>
         </PageHeader>
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4 flex-wrap">
           <SearchInput value={search} onChange={(v) => { setSearch(v); resetPage() }}
-            placeholder="Search by name or email…" className="w-full sm:w-72" disabled={isLoading} />
+            placeholder="Cari nama atau email…" className="w-full sm:w-72" disabled={isLoading} />
 
           <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); resetPage() }}
             disabled={isLoading}
@@ -90,7 +90,7 @@ const UsersPage = () => {
           {isFetching && !isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:ml-auto">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-              Refreshing…
+              Memuat ulang…
             </div>
           )}
         </div>
@@ -100,11 +100,11 @@ const UsersPage = () => {
 
           {!isLoading && isError && (
             <ErrorState
-              title={error?.response?.status === 403 ? 'Access denied' : 'Failed to load users'}
+              title={error?.response?.status === 403 ? 'Akses Ditolak' : 'Gagal memuat data pengguna'}
               message={
                 error?.response?.status === 403
-                  ? 'User management requires admin permissions.'
-                  : (error?.response?.data?.message ?? 'Could not reach the server.')
+                  ? 'Manajemen pengguna memerlukan izin admin.'
+                  : (error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.')
               }
               onRetry={error?.response?.status !== 403 ? refetch : undefined}
             />
@@ -112,12 +112,12 @@ const UsersPage = () => {
 
           {!isLoading && !isError && users.length === 0 && (
             <EmptyState icon={<Users className="w-5 h-5 text-muted-foreground" />}
-              title="No users found"
-              description={debouncedSearch || roleFilter ? 'Try clearing the filters.' : 'Create the first login account.'}
+              title="Belum ada pengguna"
+              description={debouncedSearch || roleFilter ? 'Coba hapus filter.' : 'Buat akun login pertama.'}
               action={!debouncedSearch && !roleFilter ? (
                 <button onClick={() => setCreateModalOpen(true)}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors">
-                  <PlusCircle className="w-4 h-4" />Create User
+                  <PlusCircle className="w-4 h-4" />Tambah Pengguna
                 </button>
               ) : null}
             />

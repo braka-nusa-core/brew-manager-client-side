@@ -144,9 +144,9 @@ const RowActions = ({ record, onEdit }) => {
 // ── Main Table ────────────────────────────────────────────────
 
 /**
- * @param {{ records: Object[] }} props
+ * @param {{ records: Object[], canManage: boolean }} props
  */
-const AttendanceTable = ({ records }) => {
+const AttendanceTable = ({ records, canManage }) => {
   const [selectedRecord, setSelectedRecord] = useState(null)
 
   // Resolve raw ObjectId strings → names via lookup maps
@@ -163,7 +163,7 @@ const AttendanceTable = ({ records }) => {
             <DataTable.HeadCell className="hidden md:table-cell">Outlet</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden lg:table-cell">Notes</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden xl:table-cell">Recorded</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-10" />
+            {canManage && <DataTable.HeadCell className="w-10" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -239,9 +239,11 @@ const AttendanceTable = ({ records }) => {
                 </DataTable.Cell>
 
                 {/* Actions */}
-                <DataTable.Cell onClick={(e) => e.stopPropagation()}>
-                  <RowActions record={rec} onEdit={setSelectedRecord} />
-                </DataTable.Cell>
+                {canManage && (
+                  <DataTable.Cell onClick={(e) => e.stopPropagation()}>
+                    <RowActions record={rec} onEdit={setSelectedRecord} />
+                  </DataTable.Cell>
+                )}
               </DataTable.Row>
             )
           })}
@@ -252,6 +254,7 @@ const AttendanceTable = ({ records }) => {
         open={!!selectedRecord}
         onClose={() => setSelectedRecord(null)}
         record={selectedRecord}
+        canManage={canManage}
       />
     </>
   )

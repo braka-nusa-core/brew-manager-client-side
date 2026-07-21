@@ -2,42 +2,80 @@
 // Handles both CREATE and EDIT in one modal.
 //
 // Backend contract:
-//   CREATE POST /employees: outletId, name, position, salaryType, baseSalary (number), joinDate. Optional: phone.
+//   CREATE POST /employees: outletId, name, position, joinDate. Optional: phone, employeeType, ktpStatus.
 //   UPDATE PATCH /employees/:id: all optional. tenantId immutable. isActive → /toggle-active only.
 //   salaryType enum: 'monthly' | 'daily'
 //   baseSalary: must be a NUMBER sent to backend (not a string)
 //   joinDate: ISO date string "YYYY-MM-DD"
+//   ktpStatus enum: 'pending' | 'received', default 'pending'
+//
+// v4 — "Working Outlet" architecture:
+//   The Outlet selector has been REMOVED from this form entirely (not
+//   hidden, not disabled). The employee's outlet is no longer a form
+//   field — it is derived SOLELY from the app-wide Working Outlet
+//   (useEffectiveOutletId(), the same source the Navbar's Outlet
+//   Switcher writes to). This is the ONLY outlet source this form ever
+//   consults — employee.outletId is never read for any decision here.
+//
+//   CREATE and EDIT are identical with respect to outlet resolution —
+//   there is no branching between them:
+//     - Both always resolve payrollType from effectiveOutletId.
+//     - Both always send outletId = effectiveOutletId in the payload.
+//       For edit this is never a reassignment: the Employee List is
+//       already filtered by the Working Outlet, so an employee opened
+//       for edit is assumed to already belong to it. Outlet transfer is
+//       explicitly out of scope for this form — a future "Transfer
+//       Employee" feature will own that; no reconciliation logic exists
+//       here for the case where they might differ.
+//     - Both require a specific Working Outlet to be selected. "All
+//       Outlets" is NOT a valid working context for this form — if
+//       effectiveOutletId is null, the form is blocked entirely (no
+//       fallback, no substitute value invented).
+//
+//   payrollType (which drives salary-field visibility) follows the
+//   Working Outlet directly:
+//     Working Outlet → Outlet.payrollType → salary fields shown/hidden
+//
+// v3 — Payroll-config-follows-outlet extension:
+//   salaryType/baseSalary are NO LONGER always required — requiredness
+//   depends on payrollType ('fixed' → required, 'commission' → ignored
+//   entirely, hidden and never sent). Checked in onSubmit, not the
+//   static zod schema, since requiredness depends on the live Working
+//   Outlet, not on create-vs-edit mode.
 //
 // Bug fixes (v2):
 //   • baseSalary schema: z.coerce.number() on '' → 0 → failed .positive().
 //     Fixed: RHF now stores raw integer via <RupiahInput> (no coerce needed).
 //     Zod schema changed to z.number() — receives actual number, not string.
-//   • outletId field: AsyncSearchSelect via useOutlets().
 //   • Rupiah UX: <RupiahInput> formats display as "3.000.000", stores 3000000.
 
-import { useEffect, useState }                from 'react'
-import { useForm, Controller }                from 'react-hook-form'
+import { useEffect }                          from 'react'
+import { useForm }                            from 'react-hook-form'
 import { zodResolver }                        from '@hookform/resolvers/zod'
 import { z }                                  from 'zod'
-import { Loader2 }                            from 'lucide-react'
+import { Loader2, TriangleAlert }             from 'lucide-react'
 
 import Modal                                  from '@/components/shared/Modal'
 import FormField, { Input, Select }           from '@/components/shared/FormField'
-import AsyncSearchSelect                      from '@/components/shared/AsyncSearchSelect'
 import RupiahInput                            from '@/components/shared/RupiahInput'
 import { useCreateEmployee, useUpdateEmployee } from '../hooks/useEmployees'
-import { useOutlets }                         from '@/features/outlets/hooks/useOutlets'
+import { useEffectiveOutletId }               from '@/store/activeOutletStore'
+import useEntityMap                           from '@/hooks/useEntityMap'
 import useToast                               from '@/hooks/useToast'
-import useDebounce                            from '@/hooks/useDebounce'
 import { cn }                                 from '@/lib/utils'
 
 // ── Zod schemas ───────────────────────────────────────────────
 //
+// outletId is intentionally NOT a field here at all — see file header.
+//
 // baseSalary is now z.number() (not z.coerce.number()) because
 // RupiahInput stores an actual integer into RHF — no string coercion needed.
 // The .or(z.literal('')) on editSchema handles the "field not touched" case.
-
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i
+//
+// salaryType/baseSalary are optional at the schema level in BOTH create
+// and edit — their real requiredness depends on the Working Outlet's
+// payrollType, checked imperatively in onSubmit (see component below),
+// since a static zod schema can't react to which outlet is active.
 
 // ── employeeType — must mirror backend EMPLOYEE_TYPES exactly ──
 // Backend: Employee.model.js → EMPLOYEE_TYPES = ['barista','cashier','supervisor','rider']
@@ -51,23 +89,31 @@ const EMPLOYEE_TYPE_LABELS = {
   rider:      'Rider',
 }
 
+// ── ktpStatus — must mirror backend KTP_STATUSES exactly ──
+// Backend: Employee.model.js → KTP_STATUSES = ['pending', 'received']
+export const KTP_STATUSES = ['pending', 'received']
+
+const KTP_STATUS_LABELS = {
+  pending:  'Pending',
+  received: 'Received',
+}
+
 // ── preprocess helper: treat empty string as undefined for optional numbers ──
 const optionalNumber = z
   .union([z.number().min(0, 'Cannot be negative'), z.literal('')])
   .optional()
 
 const createSchema = z.object({
-  outletId:     z.string().regex(OBJECT_ID_RE, 'Select a valid outlet'),
   name:         z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
   phone:        z.string().max(20, 'Phone too long').optional().or(z.literal('')),
   position:     z.string().min(2, 'Position must be at least 2 characters').max(50, 'Position too long'),
   employeeType: z.enum(EMPLOYEE_TYPES, { required_error: 'Select an employee type' }),
-  salaryType:   z.enum(['monthly', 'daily'], { required_error: 'Select a salary type' }),
-  // RupiahInput stores integer | '' — require it to be a positive number on create
-  baseSalary:   z
-    .number({ required_error: 'Base salary is required', invalid_type_error: 'Enter a valid amount' })
-    .min(1, 'Must be greater than 0'),
+  // Requiredness depends on the Working Outlet's payrollType — enforced
+  // in onSubmit, not here (see file header).
+  salaryType:   z.enum(['monthly', 'daily']).optional().or(z.literal('')),
+  baseSalary:   optionalNumber,
   joinDate:     z.string().min(1, 'Join date is required'),
+  ktpStatus:    z.enum(KTP_STATUSES, { required_error: 'Select a KTP status' }),
 })
 
 const editSchema = z.object({
@@ -75,9 +121,10 @@ const editSchema = z.object({
   phone:        z.string().max(20).optional().or(z.literal('')),
   position:     z.string().min(2, 'At least 2 characters').max(50).optional().or(z.literal('')),
   employeeType: z.enum(EMPLOYEE_TYPES).optional(),
-  salaryType:   z.enum(['monthly', 'daily']).optional(),
+  salaryType:   z.enum(['monthly', 'daily']).optional().or(z.literal('')),
   baseSalary:   optionalNumber,
   joinDate:     z.string().optional().or(z.literal('')),
+  ktpStatus:    z.enum(KTP_STATUSES).optional(),
 })
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -95,8 +142,7 @@ const cleanPayload = (data) =>
 
 // ── Default values ────────────────────────────────────────────
 
-const getCreateDefaults = (defaultOutletId) => ({
-  outletId:     defaultOutletId ?? '',
+const getCreateDefaults = () => ({
   name:         '',
   phone:        '',
   position:     '',
@@ -104,6 +150,7 @@ const getCreateDefaults = (defaultOutletId) => ({
   salaryType:   'monthly',
   baseSalary:   '',   // RupiahInput treats '' as empty/cleared display
   joinDate:     '',
+  ktpStatus:    'pending',
 })
 
 const getEditDefaults = (employee) => ({
@@ -115,23 +162,23 @@ const getEditDefaults = (employee) => ({
   // Pass raw number so RupiahInput can format the display on open
   baseSalary:   employee?.baseSalary   ?? '',
   joinDate:     toDateInputValue(employee?.joinDate),
+  ktpStatus:    employee?.ktpStatus    ?? 'pending',
 })
 
 // ── Component ─────────────────────────────────────────────────
 
-const EmployeeFormModal = ({ open, onClose, employee = null, defaultOutletId }) => {
+const EmployeeFormModal = ({ open, onClose, employee = null }) => {
   const isEdit = Boolean(employee)
   const toast  = useToast()
 
-  // Outlet search state
-  const [outletSearch, setOutletSearch] = useState('')
-  const debouncedOutletSearch = useDebounce(outletSearch, 300)
+  // The "Working Outlet" — single source of truth for which outlet an
+  // employee belongs to. Same store the Navbar's Outlet Switcher writes
+  // to. null = "All Outlets" (only possible for super_admin/tenant_admin).
+  const effectiveOutletId = useEffectiveOutletId()
 
-  const { data: outletsData, isLoading: outletsLoading } = useOutlets(
-    { search: debouncedOutletSearch, isActive: true, limit: 20 },
-    { enabled: open && !isEdit }
-  )
-  const outlets = outletsData?.data ?? []
+  // Reused abstraction (already used elsewhere, e.g. UserTable) — resolves
+  // outlet names/payrollType without a dedicated fetch of its own.
+  const { outletMap } = useEntityMap()
 
   const createMutation = useCreateEmployee()
   const updateMutation = useUpdateEmployee()
@@ -142,34 +189,87 @@ const EmployeeFormModal = ({ open, onClose, employee = null, defaultOutletId }) 
     handleSubmit,
     reset,
     control,
+    setError,
     formState: { errors },
   } = useForm({
     resolver:      zodResolver(isEdit ? editSchema : createSchema),
-    defaultValues: isEdit ? getEditDefaults(employee) : getCreateDefaults(defaultOutletId),
+    defaultValues: isEdit ? getEditDefaults(employee) : getCreateDefaults(),
   })
+
+  // ── Salary fields follow the WORKING OUTLET's payrollType, reactively.
+  // Working Outlet → Outlet.payrollType → salary fields shown/hidden.
+  // This is the ONLY outlet source this form ever consults — no fallback
+  // to employee.outletId. The Employee List is already filtered by the
+  // Working Outlet, so by the time an employee is opened for edit, it
+  // already belongs to the current Working Outlet; no reconciliation
+  // between the two is needed or attempted here.
+  const payrollOutlet    = outletMap.get(effectiveOutletId)
+  const payrollType      = payrollOutlet?.payrollType ?? 'fixed'
+  const showSalaryFields = payrollType === 'fixed'
+
+  // "All Outlets" is not a valid working context for this form — create
+  // AND edit both require a specific Working Outlet to be selected.
+  // No distinction between the two modes here.
+  const hasWorkingOutlet = !!effectiveOutletId
 
   useEffect(() => {
     if (!open) return
     if (isEdit) {
       reset(getEditDefaults(employee))
     } else {
-      reset(getCreateDefaults(defaultOutletId))
-      setOutletSearch('')
+      reset(getCreateDefaults())
     }
-  }, [open, isEdit, employee, defaultOutletId, reset])
+  }, [open, isEdit, employee, reset])
 
   const onSubmit = (data) => {
+    // No Working Outlet selected ("All Outlets") — not a valid context
+    // for this form in either mode. Blocked in the UI below, but guard
+    // here too in case of a stray submit.
+    if (!hasWorkingOutlet) return
+
+    // Salary requiredness follows the WORKING OUTLET's payrollType —
+    // not a static create/edit rule — so it's checked here, not in zod.
+    if (payrollType === 'fixed') {
+      let hasError = false
+      if (!data.salaryType) {
+        setError('salaryType', { message: 'Salary type is required for a fixed-payroll outlet' })
+        hasError = true
+      }
+      if (data.baseSalary === '' || data.baseSalary === undefined || data.baseSalary === null) {
+        setError('baseSalary', { message: 'Base salary is required for a fixed-payroll outlet' })
+        hasError = true
+      }
+      if (hasError) return
+    }
+
     const payload = cleanPayload(data)
+
+    // Commission-payroll outlet: salary fields are hidden and not
+    // applicable — never send them, regardless of leftover form state
+    // from before the Working Outlet changed.
+    if (payrollType === 'commission') {
+      delete payload.salaryType
+      delete payload.baseSalary
+    }
+
+    // outletId always comes from the Working Outlet — the ONLY outlet
+    // source this form uses, in both create and edit. This is never a
+    // reassignment: the Employee List is already filtered by the Working
+    // Outlet, so an employee opened for edit already belongs to it —
+    // this just reflects the same single source of truth uniformly,
+    // not outlet-transfer logic (that's a future, separate feature).
+    const payloadWithOutlet = { ...payload, outletId: effectiveOutletId }
+
     if (isEdit) {
       updateMutation.mutate(
-        { employeeId: employee._id, payload },
+        { employeeId: employee._id, payload: payloadWithOutlet },
         {
           onSuccess: () => { toast.success('Employee updated', employee.name); onClose() },
           onError:   (err) => toast.error('Update failed', err?.response?.data?.message ?? 'Please try again'),
         }
       )
     } else {
-      createMutation.mutate(payload, {
+      createMutation.mutate(payloadWithOutlet, {
         onSuccess: () => { toast.success('Employee created successfully'); onClose() },
         onError:   (err) => toast.error('Failed to create employee', err?.response?.data?.message ?? 'Check your inputs'),
       })
@@ -190,33 +290,13 @@ const EmployeeFormModal = ({ open, onClose, employee = null, defaultOutletId }) 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="space-y-4">
 
-          {/* Outlet selector — create only */}
-          {!isEdit && (
-            <FormField label="Outlet" error={errors.outletId?.message} required>
-              <Controller
-                control={control}
-                name="outletId"
-                render={({ field }) => (
-                  <AsyncSearchSelect
-                    value={field.value}
-                    onChange={field.onChange}
-                    items={outlets}
-                    getLabel={(o) => o.name}
-                    getValue={(o) => o._id}
-                    onSearchChange={setOutletSearch}
-                    isLoading={outletsLoading}
-                    placeholder="Search outlets…"
-                    error={!!errors.outletId?.message}
-                    disabled={isPending}
-                    emptyMessage={
-                      debouncedOutletSearch
-                        ? `No outlets matching "${debouncedOutletSearch}"`
-                        : 'No active outlets found.'
-                    }
-                  />
-                )}
-              />
-            </FormField>
+          {/* No Working Outlet selected ("All Outlets") — not a valid
+              context for this form in either mode. */}
+          {!hasWorkingOutlet && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-sm text-amber-800 dark:text-amber-400">
+              <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>Select a specific outlet from the switcher above to {isEdit ? 'edit this employee' : 'add an employee'}.</span>
+            </div>
           )}
 
           {/* Name */}
@@ -265,39 +345,59 @@ const EmployeeFormModal = ({ open, onClose, employee = null, defaultOutletId }) 
             </FormField>
           </div>
 
-          {/* Salary Type + Base Salary side by side */}
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Salary Type" error={errors.salaryType?.message} required={!isEdit}>
-              <Select
-                {...register('salaryType')}
-                error={!!errors.salaryType?.message}
-                disabled={isPending}
-              >
-                <option value="monthly">Monthly</option>
-                <option value="daily">Daily</option>
-              </Select>
-            </FormField>
+          {/* Salary Type + Base Salary — ONLY for fixed-payroll outlets.
+              Not rendered at all (not disabled) for commission outlets,
+              and reacts immediately when a different outlet is selected. */}
+          {showSalaryFields && (
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Salary Type" error={errors.salaryType?.message} required>
+                <Select
+                  {...register('salaryType')}
+                  error={!!errors.salaryType?.message}
+                  disabled={isPending}
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="daily">Daily</option>
+                </Select>
+              </FormField>
 
-            <FormField label="Base Salary (IDR)" error={errors.baseSalary?.message} required={!isEdit}>
-              <RupiahInput
-                control={control}
-                name="baseSalary"
-                placeholder="e.g. 3.000.000"
-                error={!!errors.baseSalary?.message}
+              <FormField label="Base Salary (IDR)" error={errors.baseSalary?.message} required>
+                <RupiahInput
+                  control={control}
+                  name="baseSalary"
+                  placeholder="e.g. 3.000.000"
+                  error={!!errors.baseSalary?.message}
+                  disabled={isPending}
+                />
+              </FormField>
+            </div>
+          )}
+
+          {/* Join Date + KTP Status side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Join Date" error={errors.joinDate?.message} required={!isEdit}>
+              <Input
+                {...register('joinDate')}
+                type="date"
+                error={!!errors.joinDate?.message}
                 disabled={isPending}
               />
             </FormField>
-          </div>
 
-          {/* Join Date */}
-          <FormField label="Join Date" error={errors.joinDate?.message} required={!isEdit}>
-            <Input
-              {...register('joinDate')}
-              type="date"
-              error={!!errors.joinDate?.message}
-              disabled={isPending}
-            />
-          </FormField>
+            <FormField label="KTP Status" error={errors.ktpStatus?.message} required>
+              <Select
+                {...register('ktpStatus')}
+                error={!!errors.ktpStatus?.message}
+                disabled={isPending}
+              >
+                {KTP_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {KTP_STATUS_LABELS[status]}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
 
         </div>
 
@@ -313,7 +413,7 @@ const EmployeeFormModal = ({ open, onClose, employee = null, defaultOutletId }) 
           </button>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !hasWorkingOutlet}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
               'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',

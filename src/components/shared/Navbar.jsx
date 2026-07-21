@@ -4,14 +4,16 @@
 //
 // Contains:
 //   - Mobile sidebar toggle (hamburger)
-//   - Outlet switcher placeholder (future feature)
+//   - Outlet switcher (OutletSwitcher — searchable for super_admin/
+//     tenant_admin, read-only for manager/cashier)
 //   - User avatar dropdown with role badge and logout
 // ============================================================
 
-import { Menu, ChevronDown, LogOut, User, Building2, Lock } from 'lucide-react'
+import { Menu, ChevronDown, LogOut, User, Lock } from 'lucide-react'
 import { useAuthStore, selectUser }  from '@/store/authStore'
 import { useLogout }                 from '@/features/auth/hooks/useAuth'
 import NotificationBell              from '@/features/notification/components/NotificationBell'
+import OutletSwitcher                from '@/features/outlets/components/OutletSwitcher'
 import ChangePasswordModal           from '@/features/auth/components/ChangePasswordModal'
 import { cn }                        from '@/lib/utils'
 import { useState }                  from 'react'
@@ -59,12 +61,8 @@ const Navbar = ({ onMobileMenuToggle }) => {
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Outlet switcher placeholder */}
-        <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md border border-border hover:bg-muted transition-colors text-sm">
-          <Building2 className="w-4 h-4 text-muted-foreground" />
-          <span className="text-muted-foreground font-medium">All Outlets</span>
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
+        {/* Outlet switcher */}
+        <OutletSwitcher />
       </div>
 
       {/* ── Right: Notification bell + User dropdown ─────────── */}

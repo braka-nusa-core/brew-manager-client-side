@@ -11,32 +11,40 @@
 // EDIT body: { name?, assetCode?, notes?, outletId? } — at least one required.
 //   - status, isActive, tenantId all FORBIDDEN — backend 400s.
 //   - notes: null clears the field (backend: data.notes?.trim() ?? null).
-//   - outletId change is allowed (unlike Cup's riderId which is immutable).
+//   - Backend technically allows outletId on update, but this form no
+//     longer offers outlet reassignment — see Working Outlet note below.
+//
+// Working Outlet architecture:
+//   There is no outlet selector in this form at all (create OR edit).
+//   outletId always comes from useEffectiveOutletId() — the same single
+//   source of truth the Navbar's Outlet Switcher writes to. Both create
+//   and update always send outletId = the Working Outlet; for edit this
+//   is never a reassignment — the Bikes list is already filtered by the
+//   Working Outlet, so a bike opened for edit already belongs to it.
+//   Transferring a bike to a different outlet is out of scope for this
+//   form (a future dedicated feature would own that). If no Working
+//   Outlet is selected ("All Outlets"), both create and edit are blocked.
 //
 // Pattern: EmployeeFormModal + CupRecordFormModal.
 
-import { useEffect, useState }                from 'react'
-import { useForm, Controller }                from 'react-hook-form'
+import { useEffect }                          from 'react'
+import { useForm }                            from 'react-hook-form'
 import { zodResolver }                        from '@hookform/resolvers/zod'
 import { z }                                  from 'zod'
-import { Loader2 }                            from 'lucide-react'
+import { Loader2, TriangleAlert }             from 'lucide-react'
 
 import Modal                                  from '@/components/shared/Modal'
 import FormField, { Input }                   from '@/components/shared/FormField'
-import AsyncSearchSelect                      from '@/components/shared/AsyncSearchSelect'
 import { useCreateBike, useUpdateBike }       from '../hooks/useBikes'
-import { useOutlets }                         from '@/features/outlets/hooks/useOutlets'
+import { useEffectiveOutletId }               from '@/store/activeOutletStore'
 import useToast                               from '@/hooks/useToast'
-import useDebounce                            from '@/hooks/useDebounce'
-import useEntityMap                           from '@/hooks/useEntityMap'
 import { cn }                                 from '@/lib/utils'
 
 // ── Zod schemas ───────────────────────────────────────────────
-
-const OBJECT_ID_RE = /^[a-f\d]{24}$/i
+//
+// outletId is intentionally NOT a field here — see file header.
 
 const createSchema = z.object({
-  outletId:  z.string().regex(OBJECT_ID_RE, 'Select an outlet'),
   assetCode: z.string()
     .min(2,  'Asset code must be at least 2 characters')
     .max(20, 'Asset code must not exceed 20 characters'),
@@ -47,7 +55,6 @@ const createSchema = z.object({
 })
 
 const editSchema = z.object({
-  outletId:  z.string().regex(OBJECT_ID_RE, 'Select a valid outlet').optional().or(z.literal('')),
   assetCode: z.string().min(2).max(20).optional().or(z.literal('')),
   name:      z.string().min(2).max(100).optional().or(z.literal('')),
   notes:     z.string().max(500, 'Notes too long').optional().or(z.literal('')),
@@ -61,14 +68,12 @@ const cleanPayload = (data) =>
   )
 
 const getCreateDefaults = () => ({
-  outletId:  '',
   assetCode: '',
   name:      '',
   notes:     '',
 })
 
 const getEditDefaults = (bike) => ({
-  outletId:  bike?.outletId?.toString?.() ?? bike?.outletId ?? '',
   assetCode: bike?.assetCode ?? '',
   name:      bike?.name      ?? '',
   notes:     bike?.notes     ?? '',
@@ -80,16 +85,11 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
   const isEdit = Boolean(bike)
   const toast  = useToast()
 
-  // Outlet search
-  const [outletSearch, setOutletSearch]   = useState('')
-  const debouncedOutletSearch             = useDebounce(outletSearch, 300)
-  const { outletMap }                     = useEntityMap()
-
-  const { data: outletsData, isLoading: outletsLoading } = useOutlets(
-    { search: debouncedOutletSearch, isActive: true, limit: 20 },
-    { enabled: open }
-  )
-  const outlets = outletsData?.data ?? []
+  // The single source of truth for outlet — no local outlet state, no
+  // form field, no AsyncSearchSelect. Same store the Navbar's Outlet
+  // Switcher writes to. null = "All Outlets".
+  const effectiveOutletId = useEffectiveOutletId()
+  const hasWorkingOutlet  = !!effectiveOutletId
 
   const createMutation = useCreateBike()
   const updateMutation = useUpdateBike()
@@ -99,7 +99,6 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
     register,
     handleSubmit,
     reset,
-    control,
     formState: { errors },
   } = useForm({
     resolver:      zodResolver(isEdit ? editSchema : createSchema),
@@ -109,18 +108,26 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
   useEffect(() => {
     if (!open) return
     reset(isEdit ? getEditDefaults(bike) : getCreateDefaults())
-    setOutletSearch('')
   }, [open, isEdit, bike, reset])
 
   const onSubmit = (data) => {
+    // No Working Outlet selected ("All Outlets") — not a valid context
+    // for this form in either mode. Blocked in the UI below, but guard
+    // here too in case of a stray submit.
+    if (!hasWorkingOutlet) return
+
     if (isEdit) {
       // Build edit payload manually: cleanPayload for most fields,
       // but notes: null must be preserved to clear existing notes.
       const { notes, ...rest } = data
       const payload = cleanPayload(rest)
       payload.notes = notes || null // null clears; string updates; backend skips if not sent
-      // If notes is '' and the bike had no notes, sending null is harmless.
-      // If no meaningful fields changed, still send — validation error bubbles back.
+
+      // outletId always comes from the Working Outlet — the ONLY outlet
+      // source this form uses, in both create and edit. This is never a
+      // reassignment: the Bikes list is already filtered by the Working
+      // Outlet, so a bike opened for edit already belongs to it.
+      payload.outletId = effectiveOutletId
 
       updateMutation.mutate(
         { bikeId: bike._id, payload },
@@ -137,6 +144,7 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
       )
     } else {
       const payload = cleanPayload({ ...data, notes: data.notes || undefined })
+      payload.outletId = effectiveOutletId
       createMutation.mutate(payload, {
         onSuccess: () => { toast.success('Bike created'); onClose() },
         onError: (err) => {
@@ -149,11 +157,6 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
       })
     }
   }
-
-  // Resolve current outlet name for edit panel
-  const currentOutletName = isEdit && bike
-    ? outletMap.get(bike.outletId?.toString?.() ?? bike.outletId)?.name ?? '—'
-    : null
 
   return (
     <Modal
@@ -169,36 +172,14 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="space-y-4">
 
-          {/* Outlet selector */}
-          <FormField label="Outlet" error={errors.outletId?.message} required={!isEdit}>
-            <Controller
-              control={control}
-              name="outletId"
-              render={({ field }) => (
-                <AsyncSearchSelect
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={outlets}
-                  getLabel={(o) => o.name}
-                  getValue={(o) => o._id}
-                  onSearchChange={setOutletSearch}
-                  isLoading={outletsLoading}
-                  placeholder={
-                    isEdit && currentOutletName
-                      ? currentOutletName
-                      : 'Search outlets…'
-                  }
-                  error={!!errors.outletId?.message}
-                  disabled={isPending}
-                  emptyMessage={
-                    debouncedOutletSearch
-                      ? `No outlets matching "${debouncedOutletSearch}"`
-                      : 'No active outlets found.'
-                  }
-                />
-              )}
-            />
-          </FormField>
+          {/* No Working Outlet selected ("All Outlets") — not a valid
+              context for this form in either mode. */}
+          {!hasWorkingOutlet && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-sm text-amber-800 dark:text-amber-400">
+              <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>Select a specific outlet from the switcher above to {isEdit ? 'edit this bike' : 'add a bike'}.</span>
+            </div>
+          )}
 
           {/* Asset Code */}
           <FormField
@@ -263,7 +244,7 @@ const BikeFormModal = ({ open, onClose, bike = null }) => {
           </button>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !hasWorkingOutlet}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
               'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',

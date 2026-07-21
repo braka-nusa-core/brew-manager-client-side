@@ -13,13 +13,13 @@ import { cn } from '@/lib/utils'
  * }} props
  */
 const ErrorState = ({
-  title       = 'Something went wrong',
+  title       = 'Terjadi kesalahan',
   message,
   onRetry,
   className,
 }) => {
   const displayMessage = message
-    ?? 'Failed to load data. Please check your connection and try again.'
+    ?? 'Gagal memuat data. Periksa koneksi Anda dan coba lagi.'
 
   return (
     <div className={cn(
@@ -42,7 +42,7 @@ const ErrorState = ({
           )}
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Try again
+          Coba lagi
         </button>
       )}
     </div>

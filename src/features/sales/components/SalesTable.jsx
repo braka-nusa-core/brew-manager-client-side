@@ -142,7 +142,7 @@ const RowActions = ({ sale, onEdit }) => {
 
 // ── Main Table ────────────────────────────────────────────────
 
-const SalesTable = ({ sales }) => {
+const SalesTable = ({ sales, canManage }) => {
   const [editSale, setEditSale] = useState(null)
 
   // Resolve raw ObjectId strings → names via lookup maps
@@ -159,7 +159,7 @@ const SalesTable = ({ sales }) => {
             <DataTable.HeadCell>Revenue</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden lg:table-cell">Outlet</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden xl:table-cell">Notes</DataTable.HeadCell>
-            <DataTable.HeadCell className="w-10" />
+            {canManage && <DataTable.HeadCell className="w-10" />}
           </DataTable.HeadRow>
         </DataTable.Head>
 
@@ -175,8 +175,8 @@ const SalesTable = ({ sales }) => {
             return (
               <DataTable.Row
                 key={sale._id}
-                onClick={() => setEditSale(sale)}
-                className="cursor-pointer"
+                onClick={canManage ? () => setEditSale(sale) : undefined}
+                className={canManage ? 'cursor-pointer' : undefined}
               >
                 {/* Employee */}
                 <DataTable.Cell>
@@ -229,9 +229,11 @@ const SalesTable = ({ sales }) => {
                 </DataTable.Cell>
 
                 {/* Actions */}
-                <DataTable.Cell onClick={(e) => e.stopPropagation()}>
-                  <RowActions sale={sale} onEdit={setEditSale} />
-                </DataTable.Cell>
+                {canManage && (
+                  <DataTable.Cell onClick={(e) => e.stopPropagation()}>
+                    <RowActions sale={sale} onEdit={setEditSale} />
+                  </DataTable.Cell>
+                )}
               </DataTable.Row>
             )
           })}

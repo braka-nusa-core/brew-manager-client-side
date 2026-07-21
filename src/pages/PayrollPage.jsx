@@ -21,25 +21,32 @@ import PayrollTableSkeleton        from '@/features/payroll/components/PayrollTa
 import GeneratePayrollModal        from '@/features/payroll/components/GeneratePayrollModal'
 import { PAYROLL_STATUSES, PAYROLL_STATUS_CONFIG } from '@/features/payroll/components/PayrollStatusBadge'
 import { useGetPayrolls }             from '@/features/payroll/hooks/usePayroll'
+import { useEffectiveOutletId }       from '@/store/activeOutletStore'
+import { useAuthStore, selectUserRole } from '@/store/authStore'
 import useDebounce                 from '@/hooks/useDebounce'
 import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
+// Roles that can manage (generate/approve/reject/adjust) payroll —
+// mirrors backend's MANAGE_PAYROLL grant (super_admin, tenant_admin only —
+// NOT manager, unlike most other operational modules).
+const MANAGE_ROLES = ['super_admin', 'tenant_admin']
+
 const MONTHS = [
-  { label: 'All Months', value: '' },
-  { label: 'January',   value: 1  },
-  { label: 'February',  value: 2  },
-  { label: 'March',     value: 3  },
+  { label: 'Semua Bulan', value: '' },
+  { label: 'Januari',   value: 1  },
+  { label: 'Februari',  value: 2  },
+  { label: 'Maret',     value: 3  },
   { label: 'April',     value: 4  },
-  { label: 'May',       value: 5  },
-  { label: 'June',      value: 6  },
-  { label: 'July',      value: 7  },
-  { label: 'August',    value: 8  },
+  { label: 'Mei',       value: 5  },
+  { label: 'Juni',      value: 6  },
+  { label: 'Juli',      value: 7  },
+  { label: 'Agustus',   value: 8  },
   { label: 'September', value: 9  },
-  { label: 'October',   value: 10 },
+  { label: 'Oktober',   value: 10 },
   { label: 'November',  value: 11 },
-  { label: 'December',  value: 12 },
+  { label: 'Desember',  value: 12 },
 ]
 
 const currentYear  = new Date().getFullYear()
@@ -48,7 +55,7 @@ const currentMonth = new Date().getMonth() + 1
 const YEAR_OPTIONS = [currentYear - 1, currentYear, currentYear + 1]
 
 const STATUS_OPTIONS = [
-  { label: 'All Statuses', value: '' },
+  { label: 'Semua Status', value: '' },
   ...PAYROLL_STATUSES.map((s) => ({
     label: PAYROLL_STATUS_CONFIG[s]?.label ?? s,
     value: s,
@@ -58,6 +65,8 @@ const STATUS_OPTIONS = [
 // ── Page ──────────────────────────────────────────────────────
 
 const PayrollPage = () => {
+  const role      = useAuthStore(selectUserRole)
+  const canManage = MANAGE_ROLES.includes(role)
   // ── Filter state ───────────────────────────────────────────
   const [page,             setPage]             = useState(1)
   const [search,           setSearch]           = useState('')
@@ -65,6 +74,7 @@ const PayrollPage = () => {
   const [monthFilter,      setMonthFilter]      = useState(currentMonth)
   const [yearFilter,       setYearFilter]       = useState(currentYear)
   const [generateOpen,     setGenerateOpen]     = useState(false)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const debouncedSearch = useDebounce(search, 300)
   const resetPage = () => setPage(1)
@@ -83,6 +93,7 @@ const PayrollPage = () => {
     status: statusFilter || undefined,
     month:  monthFilter  || undefined,
     year:   yearFilter   || undefined,
+    outletId: effectiveOutletId || undefined,
   })
 
   const rawPayrolls = data?.data       ?? []
@@ -112,20 +123,22 @@ const PayrollPage = () => {
       <div>
         {/* Header */}
         <PageHeader
-          title="Payroll"
-          description="Generate, review, and approve employee payroll records."
+          title="Penggajian"
+          description="Buat, tinjau, dan setujui data penggajian karyawan."
         >
-          <button
-            onClick={() => setGenerateOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-              'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-            )}
-          >
-            <Banknote className="w-4 h-4" />
-            Generate Payroll
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setGenerateOpen(true)}
+              className={cn(
+                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
+                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+              )}
+            >
+              <Banknote className="w-4 h-4" />
+              Generate Penggajian
+            </button>
+          )}
         </PageHeader>
 
         {/* Filters */}
@@ -136,7 +149,7 @@ const PayrollPage = () => {
             <SearchInput
               value={search}
               onChange={(v) => { setSearch(v); resetPage() }}
-              placeholder="Search employee name…"
+              placeholder="Cari nama karyawan…"
               className="w-full sm:w-64"
               disabled={isLoading}
             />
@@ -159,7 +172,7 @@ const PayrollPage = () => {
             {isFetching && !isLoading && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground self-center sm:ml-auto">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                Refreshing…
+                Memuat ulang…
               </div>
             )}
           </div>
@@ -205,8 +218,8 @@ const PayrollPage = () => {
           {!isLoading && !isError && rawPayrolls.length > 0 && (
             <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                {pagination.total} record{pagination.total !== 1 ? 's' : ''}
-                {debouncedSearch && ` · ${payrolls.length} matching "${debouncedSearch}"`}
+                {pagination.total} data
+                {debouncedSearch && ` · ${payrolls.length} cocok dengan "${debouncedSearch}"`}
               </p>
               <div className="hidden sm:flex items-center gap-4">
                 {Object.entries(statusCounts).map(([status, count]) => {
@@ -229,8 +242,8 @@ const PayrollPage = () => {
           {/* Error */}
           {!isLoading && isError && (
             <ErrorState
-              title="Failed to load payroll records"
-              message={error?.response?.data?.message ?? 'Could not reach the server.'}
+              title="Gagal memuat data penggajian"
+              message={error?.response?.data?.message ?? 'Tidak dapat terhubung ke server.'}
               onRetry={refetch}
             />
           )}
@@ -241,26 +254,28 @@ const PayrollPage = () => {
               icon={<FileText className="w-5 h-5 text-muted-foreground" />}
               title={
                 debouncedSearch
-                  ? `No payroll matching "${debouncedSearch}"`
+                  ? `Tidak ada penggajian cocok dengan "${debouncedSearch}"`
                   : statusFilter
-                  ? `No ${statusFilter} payroll records`
-                  : 'No payroll records yet'
+                  ? `Tidak ada penggajian berstatus ${statusFilter}`
+                  : 'Belum ada data penggajian'
               }
               description={
                 debouncedSearch
-                  ? 'Try a different name.'
+                  ? 'Coba nama lain.'
                   : statusFilter
-                  ? 'Change the status filter or generate payroll for this period.'
-                  : 'Click "Generate Payroll" to create records for your team.'
+                  ? 'Ubah filter status atau buat penggajian untuk periode ini.'
+                  : canManage
+                  ? 'Klik "Generate Penggajian" untuk membuat data untuk tim Anda.'
+                  : 'Belum ada data penggajian untuk periode ini.'
               }
               action={
-                !debouncedSearch && !statusFilter ? (
+                canManage && !debouncedSearch && !statusFilter ? (
                   <button
                     onClick={() => setGenerateOpen(true)}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors"
                   >
                     <Banknote className="w-4 h-4" />
-                    Generate Payroll
+                    Generate Penggajian
                   </button>
                 ) : null
               }
@@ -270,7 +285,7 @@ const PayrollPage = () => {
           {/* Data */}
           {!isLoading && !isError && payrolls.length > 0 && (
             <>
-              <PayrollTable payrolls={payrolls} />
+              <PayrollTable payrolls={payrolls} canManage={canManage} />
               <div className="px-4 py-3 border-t border-border">
                 <Pagination
                   page={pagination.page ?? page}
