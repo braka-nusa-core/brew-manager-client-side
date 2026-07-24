@@ -14,6 +14,9 @@
 //   - riderId, date, tenantId, outletId, status are all IMMUTABLE — never send on PATCH.
 //   - items (if sent) is a FULL REPLACE, not a delta.
 //   - Only draft records can be edited (backend enforces; we hide the edit button for finalized records).
+//   - `refill` is READ-ONLY in this form (see CupItemRow) — used here for "closing" a
+//     draft (entering sold/returned/reject) or emergency correction of distributed/sold/
+//     returned/reject. Real refill events go through CupRecordRefillModal + POST /refill.
 //
 // Pattern follows SalesFormModal + ProductRecipeEditor exactly.
 
@@ -335,6 +338,7 @@ const CupRecordFormModal = ({ open, onClose, record = null }) => {
                       disabled={isPending}
                       canRemove={fields.length > 1}
                       onRemove={() => remove(index)}
+                      isEdit={isEdit}
                     />
                   ))}
                 </div>

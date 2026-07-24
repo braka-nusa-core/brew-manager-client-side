@@ -1,5 +1,5 @@
 // src/features/cup/components/CupItemRow.jsx
-// Single repeatable item row: product selector + 5 numeric quantity fields +
+// Single repeatable item row: product selector + quantity fields +
 // live balance preview + remove button.
 //
 // Balance formula (mirrored from cup.service.js):
@@ -7,8 +7,13 @@
 //   accounted = sold + returned + reject
 //   balance   = carried - accounted  (must be 0 to finalize)
 //
-// Five numeric fields are non-negative integers (0 is valid — backend default).
-// Initialised to 0 so the user can simply clear/type a new value.
+// `refill` is READ-ONLY here — real refill events go exclusively through
+// the dedicated Refill action (POST /cups/:id/refill), which the backend
+// appends as separate logged events. This row still submits the current
+// refill value (as a hidden field) so a PATCH save never overwrites it.
+//
+// Remaining numeric fields are non-negative integers (0 is valid — backend
+// default). Initialised to 0 so the user can simply clear/type a new value.
 //
 // Duplicate productId prevention: parent passes `selectedIds` (other rows' ids)
 // so this row's own dropdown excludes them but keeps its current selection.
@@ -29,6 +34,7 @@ import { cn } from '@/lib/utils'
  *   disabled:         boolean,
  *   canRemove:        boolean,
  *   onRemove:         () => void,
+ *   isEdit:           boolean,            // true = editing an existing draft (refill has a real value to show)
  * }} props
  */
 const CupItemRow = ({
@@ -42,6 +48,7 @@ const CupItemRow = ({
   disabled,
   canRemove,
   onRemove,
+  isEdit = false,
 }) => {
   // Exclude products chosen by other rows; keep this row's own selection visible
   const availableProducts = products.filter(
@@ -108,32 +115,46 @@ const CupItemRow = ({
         </button>
       </div>
 
-      {/* Row 2: 5 quantity inputs — grouped as IN vs OUT */}
+      {/* Row 2: quantity inputs — distributed is editable (dispatch), refill
+          is READ-ONLY here (real refills only happen via the dedicated
+          Refill action, appended as separate logged events server-side).
+          A hidden input keeps the current refill value in the form payload
+          so a PATCH save never accidentally overwrites it. */}
       <div className="pl-8 grid grid-cols-5 gap-2">
-        {/* IN group */}
-        {[
-          { name: 'distributed', label: 'Dist.' },
-          { name: 'refill',      label: 'Refill' },
-        ].map(({ name, label }) => (
-          <div key={name}>
-            <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">
-              {label}
-            </p>
-            <Input
-              {...register(`items.${index}.${name}`, { valueAsNumber: true })}
-              type="number"
-              min="0"
-              step="1"
-              placeholder="0"
-              error={!!errors?.[name]}
-              disabled={disabled}
-              className="text-center"
-            />
-            {errors?.[name] && (
-              <p className="text-[10px] text-destructive mt-0.5">{errors[name].message}</p>
-            )}
+        {/* Distributed — editable (this is the dispatch quantity) */}
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+            Dist.
+          </p>
+          <Input
+            {...register(`items.${index}.distributed`, { valueAsNumber: true })}
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            error={!!errors?.distributed}
+            disabled={disabled}
+            className="text-center"
+          />
+          {errors?.distributed && (
+            <p className="text-[10px] text-destructive mt-0.5">{errors.distributed.message}</p>
+          )}
+        </div>
+
+        {/* Refill — read-only display. Real refills go through the
+            dedicated "Refill" action (POST /cups/:id/refill), never PATCH. */}
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+            Refill
+          </p>
+          <input type="hidden" {...register(`items.${index}.refill`, { valueAsNumber: true })} />
+          <div
+            className="h-9 flex items-center justify-center rounded-md border border-input bg-muted/40 text-sm text-muted-foreground tabular-nums"
+            title={isEdit ? 'Use the Refill action to add more' : 'Set via the Refill action after dispatch'}
+          >
+            {Number(watchedItem?.refill) || 0}
           </div>
-        ))}
+        </div>
 
         {/* OUT group */}
         {[

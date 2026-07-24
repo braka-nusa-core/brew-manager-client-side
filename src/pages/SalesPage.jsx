@@ -7,28 +7,26 @@
 // Page subtotal: sum of totalRevenue for current page
 
 import { useState }                from 'react'
-import { TrendingUp, PlusCircle, Coffee } from 'lucide-react'
+import { TrendingUp, Coffee }      from 'lucide-react'
 
 import PageHeader                  from '@/components/shared/PageHeader'
-import SearchInput                 from '@/components/shared/SearchInput'
 import Pagination                  from '@/components/shared/Pagination'
 import EmptyState                  from '@/components/shared/EmptyState'
 import ErrorState                  from '@/components/shared/ErrorState'
 
 import SalesTable                  from '@/features/sales/components/SalesTable'
 import SalesTableSkeleton          from '@/features/sales/components/SalesTableSkeleton'
-import SalesFormModal              from '@/features/sales/components/SalesFormModal'
 import { useSales }                from '@/features/sales/hooks/useSales'
 import { useEffectiveOutletId }    from '@/store/activeOutletStore'
-import { useAuthStore, selectUserRole } from '@/store/authStore'
-import useDebounce                 from '@/hooks/useDebounce'
 import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
-// Roles that can manage (create/edit/delete) sales — mirrors backend's
-// MANAGE_SALES grant (super_admin, tenant_admin, manager, cashier).
-const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager', 'cashier']
+// Phase 2: Sales is now a read-only ledger — Sale records are generated
+// automatically by CupRecord finalize (backend). Manual create/edit/delete
+// is intentionally removed from this page for every role. Access to VIEW
+// the page is unchanged and still follows the backend's VIEW_SALES /
+// MANAGE_SALES grant via router/routeAccess.js — only the write UI is gone.
 
 const today       = () => new Date().toISOString().split('T')[0]
 const thirtyDaysAgo = () => {
@@ -44,17 +42,11 @@ const formatCurrency = (n) =>
 // ── Component ─────────────────────────────────────────────────
 
 const SalesPage = () => {
-  const role      = useAuthStore(selectUserRole)
-  const canManage = MANAGE_ROLES.includes(role)
-
   const [page,            setPage]            = useState(1)
-  const [search,          setSearch]          = useState('')
   const [startDate,       setStartDate]       = useState(thirtyDaysAgo())
   const [endDate,         setEndDate]         = useState(today())
-  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   const effectiveOutletId = useEffectiveOutletId()
-  const debouncedSearch = useDebounce(search, 400)
   const resetPage       = () => setPage(1)
 
   const { data, isLoading, isError, error, refetch, isFetching } = useSales({
@@ -80,21 +72,7 @@ const SalesPage = () => {
         <PageHeader
           title="Penjualan"
           description="Pantau kontribusi penjualan harian per karyawan di semua outlet Anda."
-        >
-          {canManage && (
-            <button
-              onClick={() => setCreateModalOpen(true)}
-              className={cn(
-                'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-                'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-              )}
-            >
-              <PlusCircle className="w-4 h-4" />
-              Catat Penjualan
-            </button>
-          )}
-        </PageHeader>
+        />
 
         {/* Toolbar */}
         <div className="flex flex-col gap-3 mb-4">
@@ -171,31 +149,13 @@ const SalesPage = () => {
             <EmptyState
               icon={<TrendingUp className="w-5 h-5 text-muted-foreground" />}
               title="Tidak ada data penjualan"
-              description={
-                canManage
-                  ? 'Sesuaikan rentang tanggal atau catat penjualan pertama Anda.'
-                  : 'Sesuaikan rentang tanggal untuk melihat data penjualan lainnya.'
-              }
-              action={
-                canManage ? (
-                  <button
-                    onClick={() => setCreateModalOpen(true)}
-                    className={cn(
-                      'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium',
-                      'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors'
-                    )}
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    Catat Penjualan Pertama
-                  </button>
-                ) : null
-              }
+              description="Sesuaikan rentang tanggal untuk melihat data penjualan lainnya."
             />
           )}
 
           {!isLoading && !isError && sales.length > 0 && (
             <>
-              <SalesTable sales={sales} canManage={canManage} />
+              <SalesTable sales={sales} />
               <div className="px-4 py-3 border-t border-border">
                 <Pagination
                   page={pagination.page ?? page}
@@ -210,11 +170,6 @@ const SalesPage = () => {
           )}
         </div>
       </div>
-
-      <SalesFormModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-      />
     </>
   )
 }

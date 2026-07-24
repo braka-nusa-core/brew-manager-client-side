@@ -12,7 +12,12 @@
 //   GET    /cups/:id            → { success, message, data: CupRecord }
 //   POST   /cups                → body: { riderId, date, items: [{productId, distributed?, refill?, sold?, returned?, reject?}], notes? }
 //   PATCH  /cups/:id            → body: { items?, notes? } — draft only, at least one required, FULL REPLACE of items
+//                                  LEGACY/emergency-correction path only — do NOT use for refill events (see POST /refill below).
+//   POST   /cups/:id/refill     → body: { items: [{productId, quantity, notes?}] } — draft only, ONE refill event
+//                                  per call, appended server-side to refillLogs (never overwrites prior refills).
 //   PATCH  /cups/:id/finalize   → no body. 400 with { errors: string[] } if any item is unbalanced.
+//                                  On success the backend automatically generates the matching Sale
+//                                  (Sale.origin = 'system') — the frontend does NOT create a Sale after this.
 //   DELETE /cups/:id            → 204 No Content — draft only, hard delete
 //
 // Every read/write response augments items[] (server-computed, NEVER persisted, NEVER send back):
@@ -82,6 +87,28 @@ export const updateCupRecord = async (cupRecordId, payload) => {
  */
 export const finalizeCupRecord = async (cupRecordId) => {
   const { data } = await apiClient.patch(`/cups/${cupRecordId}/finalize`)
+  return data.data
+}
+
+/**
+ * Record a refill event for one or more products on a DRAFT cup record.
+ * Each call is a SEPARATE event — appended to the backend's refillLogs,
+ * never a delta/overwrite of the previous refill. A rider can be refilled
+ * multiple times a day; call this once per refill event.
+ *
+ * Backend contract (cup.routes.js / cup.controller.js / cup.service.js):
+ *   POST /cups/:id/refill  → body: { items: [{ productId, quantity, notes? }] }
+ *   - quantity must be a positive integer (>0) — this IS the refill amount
+ *     for this event, not the new total.
+ *   - productId must already exist on the cup record (already dispatched);
+ *     otherwise 400.
+ *   - Draft records only — 409 if already finalized.
+ *
+ * @param {string} cupRecordId
+ * @param {{ items: Array<{ productId: string, quantity: number, notes?: string }> }} payload
+ */
+export const addCupRefill = async (cupRecordId, payload) => {
+  const { data } = await apiClient.post(`/cups/${cupRecordId}/refill`, payload)
   return data.data
 }
 

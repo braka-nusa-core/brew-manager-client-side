@@ -8,6 +8,7 @@ import {
   getCupRecord,
   createCupRecord,
   updateCupRecord,
+  addCupRefill,
   finalizeCupRecord,
   deleteCupRecord,
 } from '../api/cupApi'
@@ -60,6 +61,21 @@ export const useUpdateCupRecord = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ cupRecordId, payload }) => updateCupRecord(cupRecordId, payload),
+    onSuccess: (_, { cupRecordId }) => {
+      queryClient.invalidateQueries({ queryKey: cupRecordKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: cupRecordKeys.detail(cupRecordId) })
+    },
+  })
+}
+
+// ── useAddCupRefill ────────────────────────────────────────────
+// Each call = one refill event (appended server-side, never overwrites
+// prior refills). Draft records only — backend rejects on finalized (409).
+
+export const useAddCupRefill = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ cupRecordId, payload }) => addCupRefill(cupRecordId, payload),
     onSuccess: (_, { cupRecordId }) => {
       queryClient.invalidateQueries({ queryKey: cupRecordKeys.lists() })
       queryClient.invalidateQueries({ queryKey: cupRecordKeys.detail(cupRecordId) })

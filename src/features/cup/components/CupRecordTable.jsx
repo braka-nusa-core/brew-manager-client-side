@@ -11,13 +11,14 @@
 import { useState, useRef }       from 'react'
 import { createPortal }           from 'react-dom'
 import {
-  MoreHorizontal, Eye, Pencil, Lock, Trash2,
+  MoreHorizontal, Eye, Pencil, RefreshCw, Lock, Trash2,
 } from 'lucide-react'
 
 import DataTable                  from '@/components/shared/DataTable'
 import CupRecordStatusBadge       from './CupRecordStatusBadge'
 import CupRecordDetailModal       from './CupRecordDetailModal'
 import CupRecordFormModal         from './CupRecordFormModal'
+import CupRecordRefillModal       from './CupRecordRefillModal'
 import FinalizeConfirmDialog      from './FinalizeConfirmDialog'
 import DeleteConfirmDialog        from './DeleteConfirmDialog'
 import useEntityMap               from '@/hooks/useEntityMap'
@@ -70,7 +71,7 @@ const getBalanceSummary = (items = []) => {
 
 // ── RowActions ────────────────────────────────────────────────
 
-const RowActions = ({ record, onView, onEdit, onFinalize, onDelete, canManage }) => {
+const RowActions = ({ record, onView, onEdit, onRefill, onFinalize, onDelete, canManage }) => {
   const [open, setOpen]       = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
   const triggerRef            = useRef(null)
@@ -135,6 +136,14 @@ const RowActions = ({ record, onView, onEdit, onFinalize, onDelete, canManage })
                 </button>
 
                 <button
+                  onClick={action(onRefill)}
+                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-muted transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
+                  Refill
+                </button>
+
+                <button
                   onClick={action(onFinalize)}
                   className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
                 >
@@ -169,6 +178,7 @@ const RowActions = ({ record, onView, onEdit, onFinalize, onDelete, canManage })
 const CupRecordTable = ({ records, canManage }) => {
   const [viewTarget,     setViewTarget]     = useState(null)
   const [editTarget,     setEditTarget]     = useState(null)
+  const [refillTarget,   setRefillTarget]   = useState(null)
   const [finalizeTarget, setFinalizeTarget] = useState(null)
   const [deleteTarget,   setDeleteTarget]   = useState(null)
 
@@ -264,6 +274,7 @@ const CupRecordTable = ({ records, canManage }) => {
                     record={record}
                     onView={setViewTarget}
                     onEdit={setEditTarget}
+                    onRefill={setRefillTarget}
                     onFinalize={setFinalizeTarget}
                     onDelete={setDeleteTarget}
                     canManage={canManage}
@@ -286,6 +297,12 @@ const CupRecordTable = ({ records, canManage }) => {
         open={!!editTarget}
         onClose={() => setEditTarget(null)}
         record={editTarget}
+      />
+
+      <CupRecordRefillModal
+        open={!!refillTarget}
+        onClose={() => setRefillTarget(null)}
+        record={refillTarget}
       />
 
       <FinalizeConfirmDialog

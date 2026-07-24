@@ -6,14 +6,24 @@
 //   - Rider name, date, outlet, recorded by, status
 //   - Items table: product | distributed | refill | carried | sold | returned | reject | accounted | balance
 //     (balance = carried - accounted; server returns these computed fields on every read)
+//   - Per-item expandable Audit History (Phase 3): dispatchLogs[] / refillLogs[] as
+//     already returned inline on each item by the existing CupRecord endpoint —
+//     no new API calls, read-only, no editing.
 //   - Notes
 //   - Close button only (all mutations go through separate dialogs/modals)
 //
 // productId resolution: fetches products locally (limit:100) to build a Map for name lookup,
 // matching the pattern used in ProductRecipeEditor (which fetches rawMaterials inline).
 // riderId resolution: uses useEntityMap which is already fetched at the app level.
+//
+// createdBy resolution (dispatchLogs/refillLogs): backend only returns the raw User
+// ObjectId here (not populated), and there is no user lookup map available in this
+// app without adding a new fetch — which Phase 3 explicitly disallows. So "Created By"
+// shows a shortened version of the raw id. This is a known/intentional limitation,
+// not a bug — see "Anything suspicious found" in the implementation write-up.
 
-import { Loader2, User, Calendar, Building2, FileText } from 'lucide-react'
+import { useState, useEffect, Fragment } from 'react'
+import { Loader2, User, Calendar, Building2, FileText, ChevronDown, PackagePlus, RefreshCw } from 'lucide-react'
 import Modal                from '@/components/shared/Modal'
 import CupRecordStatusBadge from './CupRecordStatusBadge'
 import { useProducts }      from '@/features/product/hooks/useProducts'
@@ -31,6 +41,24 @@ const formatDate = (iso) => {
   } catch { return '—' }
 }
 
+const formatDateTime = (iso) => {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
+  } catch { return '—' }
+}
+
+// createdBy is a raw ObjectId string on dispatchLogs/refillLogs (not populated by the
+// backend). No user-lookup map exists in this app without a new fetch, which Phase 3
+// disallows — so we just shorten the raw id for a compact, still-useful display.
+const shortId = (id) => {
+  const str = id?.toString?.() ?? id
+  if (!str) return '—'
+  return str.length > 10 ? `…${str.slice(-6)}` : str
+}
+
 // ── InfoRow ───────────────────────────────────────────────────
 
 const InfoRow = ({ icon: Icon, label, value }) => (
@@ -42,6 +70,39 @@ const InfoRow = ({ icon: Icon, label, value }) => (
     <span className="text-sm font-medium text-foreground">{value}</span>
   </div>
 )
+
+// ── Log table (dispatch/refill history) ─────────────────────────
+
+const LogTable = ({ logs, emptyLabel }) => {
+  if (!logs || logs.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground italic py-2 px-1">{emptyLabel}</p>
+    )
+  }
+
+  return (
+    <table className="w-full text-[11px]">
+      <thead>
+        <tr className="text-muted-foreground">
+          <th className="px-2 py-1 text-left font-medium">Qty</th>
+          <th className="px-2 py-1 text-left font-medium">Created At</th>
+          <th className="px-2 py-1 text-left font-medium">Created By</th>
+          <th className="px-2 py-1 text-left font-medium">Notes</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border/60">
+        {logs.map((log, i) => (
+          <tr key={i}>
+            <td className="px-2 py-1 tabular-nums font-medium text-foreground">{log.quantity ?? 0}</td>
+            <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">{formatDateTime(log.createdAt)}</td>
+            <td className="px-2 py-1 text-muted-foreground font-mono">{shortId(log.createdBy)}</td>
+            <td className="px-2 py-1 text-muted-foreground">{log.notes || '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
 
 // ── Balance cell ──────────────────────────────────────────────
 
@@ -67,6 +128,26 @@ const BalanceCell = ({ balance }) => (
  */
 const CupRecordDetailModal = ({ open, onClose, record }) => {
   const { employeeMap, outletMap } = useEntityMap()
+
+  // Phase 3: which items' Audit History section is expanded (by productId string).
+  // Purely local UI state — no API calls, no data mutation.
+  const [expandedIds, setExpandedIds] = useState(() => new Set())
+  const toggleExpanded = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Reset expand/collapse state whenever a different record is opened
+  // (the modal component stays mounted between opens, so state would
+  // otherwise leak from the previously viewed record).
+  const recordId = record?._id
+  useEffect(() => {
+    setExpandedIds(new Set())
+  }, [recordId])
 
   // Fetch products to resolve productId → name in the items table.
   // staleTime is generous since this is a reference list that changes rarely.
@@ -155,20 +236,79 @@ const CupRecordDetailModal = ({ open, onClose, record }) => {
                     const accounted = item.accounted ?? (item.sold + item.returned + item.reject)
                     const balance   = item.balance   ?? (carried - accounted)
 
+                    const isExpanded = expandedIds.has(productIdStr || String(i))
+
                     return (
-                      <tr key={productIdStr || i} className="bg-card hover:bg-muted/30 transition-colors">
-                        <td className="px-3 py-2 font-medium text-foreground">{productName}</td>
-                        <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.distributed ?? 0}</td>
-                        <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.refill ?? 0}</td>
-                        <td className="px-3 py-2 text-center tabular-nums font-semibold text-brand-600 dark:text-brand-400">{carried}</td>
-                        <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.sold ?? 0}</td>
-                        <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.returned ?? 0}</td>
-                        <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.reject ?? 0}</td>
-                        <td className="px-3 py-2 text-center tabular-nums font-semibold text-brand-600 dark:text-brand-400">{accounted}</td>
-                        <td className="px-3 py-2 text-center">
-                          <BalanceCell balance={balance} />
-                        </td>
-                      </tr>
+                      <Fragment key={productIdStr || i}>
+                        <tr className="bg-card hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-2 font-medium text-foreground">
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(productIdStr || String(i))}
+                              className="flex items-center gap-1.5 text-left hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                              aria-expanded={isExpanded}
+                            >
+                              <ChevronDown
+                                className={cn(
+                                  'w-3 h-3 shrink-0 text-muted-foreground transition-transform',
+                                  isExpanded && 'rotate-180'
+                                )}
+                              />
+                              {productName}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.distributed ?? 0}</td>
+                          <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.refill ?? 0}</td>
+                          <td className="px-3 py-2 text-center tabular-nums font-semibold text-brand-600 dark:text-brand-400">{carried}</td>
+                          <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.sold ?? 0}</td>
+                          <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.returned ?? 0}</td>
+                          <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">{item.reject ?? 0}</td>
+                          <td className="px-3 py-2 text-center tabular-nums font-semibold text-brand-600 dark:text-brand-400">{accounted}</td>
+                          <td className="px-3 py-2 text-center">
+                            <BalanceCell balance={balance} />
+                          </td>
+                        </tr>
+
+                        {/* Phase 3: expandable Audit History — read-only, sourced
+                            entirely from item.dispatchLogs/item.refillLogs, already
+                            present on the existing CupRecord response. */}
+                        {isExpanded && (
+                          <tr className="bg-muted/20">
+                            <td colSpan={9} className="px-3 py-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1.5 text-muted-foreground">
+                                    <PackagePlus className="w-3 h-3" />
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide">
+                                      Dispatch History
+                                    </p>
+                                  </div>
+                                  <div className="rounded-md border border-border/60 bg-card overflow-x-auto">
+                                    <LogTable
+                                      logs={item.dispatchLogs}
+                                      emptyLabel="No dispatch history."
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1.5 text-muted-foreground">
+                                    <RefreshCw className="w-3 h-3" />
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide">
+                                      Refill History
+                                    </p>
+                                  </div>
+                                  <div className="rounded-md border border-border/60 bg-card overflow-x-auto">
+                                    <LogTable
+                                      logs={item.refillLogs}
+                                      emptyLabel="No refill history."
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     )
                   })}
                 </tbody>
