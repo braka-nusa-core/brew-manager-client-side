@@ -39,6 +39,8 @@ import {
   UserCheck,
   Wrench,
   KeyRound,
+  Boxes,
+  PackagePlus,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -52,6 +54,8 @@ const NAV_ITEMS = [
   { path: '/products',   label: 'Produk',              icon: Package },
   { path: '/raw-materials', label: 'Bahan Baku',       icon: Beaker },
   { path: '/cup-records', label: 'Catatan Cup',        icon: Coffee },
+  { path: '/inventory',   label: 'Inventaris',          icon: Boxes },
+  { path: '/production',  label: 'Produksi',            icon: PackagePlus },
   { path: '/bikes',            label: 'Sepeda',             icon: Bike },
   { path: '/bike-assignments', label: 'Penugasan Sepeda',   icon: UserCheck },
   { path: '/bike-maintenance', label: 'Perawatan Sepeda',   icon: Wrench },

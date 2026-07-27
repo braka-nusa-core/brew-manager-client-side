@@ -15,6 +15,14 @@
 //     /products        → DashboardLayout → ProductsPage
 //     /raw-materials   → DashboardLayout → RawMaterialsPage
 //     /cup-records     → DashboardLayout → CupRecordsPage
+//     /inventory        → DashboardLayout → InventoryDashboardPage
+//     /inventory/list   → DashboardLayout → InventoryListPage
+//     /inventory/products/:productId → DashboardLayout → InventoryProductDetailPage
+//     /inventory/batches/:batchId    → DashboardLayout → InventoryBatchDetailPage
+//     /inventory/adjustments         → DashboardLayout → InventoryAdjustmentPage
+//     /inventory/adjustments/:adjustmentId → DashboardLayout → InventoryAdjustmentDetailPage
+//     /production            → DashboardLayout → ProductionListPage
+//     /production/:productionId → DashboardLayout → ProductionDetailPage
 //     /bikes           → DashboardLayout → BikesPage
 //     /bike-assignments→ DashboardLayout → BikeAssignmentsPage
 //     /bike-maintenance→ DashboardLayout → BikeMaintenancePage
@@ -54,6 +62,14 @@ import OutletsPage from '../pages/OutletsPage'
 import ProductsPage from '../pages/ProductsPage'
 import RawMaterialsPage from '../pages/RawMaterialsPage'
 import CupRecordsPage  from '../pages/CupRecordsPage'
+import InventoryDashboardPage from '../pages/InventoryDashboardPage'
+import InventoryListPage      from '../pages/InventoryListPage'
+import InventoryProductDetailPage from '../pages/InventoryProductDetailPage'
+import InventoryBatchDetailPage   from '../pages/InventoryBatchDetailPage'
+import InventoryAdjustmentPage       from '../pages/InventoryAdjustmentPage'
+import InventoryAdjustmentDetailPage from '../pages/InventoryAdjustmentDetailPage'
+import ProductionListPage      from '../pages/ProductionListPage'
+import ProductionDetailPage    from '../pages/ProductionDetailPage'
 import BikesPage       from '../pages/BikesPage'
 import BikeAssignmentsPage from '../pages/BikeAssignmentsPage'
 import BikeMaintenancePage from '../pages/BikeMaintenancePage'
@@ -90,6 +106,14 @@ const router = createBrowserRouter([
           { path: '/products',   element: <ProductsPage/> },
           { path: '/raw-materials', element: <RawMaterialsPage/> },
           { path: '/cup-records', element: <CupRecordsPage/> },
+          { path: '/inventory',   element: <InventoryDashboardPage/> },
+          { path: '/inventory/list', element: <InventoryListPage/> },
+          { path: '/inventory/products/:productId', element: <InventoryProductDetailPage/> },
+          { path: '/inventory/batches/:batchId', element: <InventoryBatchDetailPage/> },
+          { path: '/inventory/adjustments', element: <InventoryAdjustmentPage/> },
+          { path: '/inventory/adjustments/:adjustmentId', element: <InventoryAdjustmentDetailPage/> },
+          { path: '/production', element: <ProductionListPage/> },
+          { path: '/production/:productionId', element: <ProductionDetailPage/> },
           { path: '/bikes',             element: <BikesPage/> },
           { path: '/bike-assignments',  element: <BikeAssignmentsPage/> },
           { path: '/bike-maintenance',  element: <BikeMaintenancePage/> },

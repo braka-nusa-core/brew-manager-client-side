@@ -96,6 +96,10 @@ export const PERMISSIONS = {
   MANAGE_RAW_MATERIALS: 'manage:raw_materials',
   VIEW_RAW_MATERIALS:   'view:raw_materials',
 
+  // Inventory / Production Batches (Sprint 6.2 addition)
+  MANAGE_INVENTORY: 'manage:inventory',
+  VIEW_INVENTORY:   'view:inventory',
+
   MANAGE_BIKES: 'manage:bikes',
   VIEW_BIKES:   'view:bikes',
 
@@ -134,6 +138,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_RAW_MATERIALS,
     PERMISSIONS.MANAGE_BIKES,
     PERMISSIONS.VIEW_BIKES,
+    // Sprint 6.2 — production batch management
+    PERMISSIONS.MANAGE_INVENTORY,
+    PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.VIEW_SUBSCRIPTIONS,
     PERMISSIONS.MANAGE_UPGRADE_REQUESTS,
   ],
@@ -157,6 +164,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_RAW_MATERIALS,
     PERMISSIONS.MANAGE_BIKES,
     PERMISSIONS.VIEW_BIKES,
+    // Sprint 6.2 — production batch management
+    PERMISSIONS.MANAGE_INVENTORY,
+    PERMISSIONS.VIEW_INVENTORY,
   ],
 
   [ROLES.CASHIER]: [
@@ -168,6 +178,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_CUPS,
     PERMISSIONS.VIEW_RAW_MATERIALS,
     PERMISSIONS.VIEW_BIKES,
+    // Sprint 6.2 — view-only inventory visibility
+    PERMISSIONS.VIEW_INVENTORY,
   ],
 
   [ROLES.VIEWER]: [
@@ -182,6 +194,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_CUPS,
     PERMISSIONS.VIEW_RAW_MATERIALS,
     PERMISSIONS.VIEW_BIKES,
+    // Sprint 6.2 — view-only inventory visibility
+    PERMISSIONS.VIEW_INVENTORY,
   ],
 }
 
