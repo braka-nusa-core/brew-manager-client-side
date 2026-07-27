@@ -22,6 +22,7 @@ import Modal                         from '@/components/shared/Modal'
 import FormField, { Input }          from '@/components/shared/FormField'
 import PayrollStatusBadge            from './PayrollStatusBadge'
 import {
+  usePayroll,
   useApprovePayroll,
   useRejectPayroll,
   useMarkPayrollPaid,
@@ -103,16 +104,27 @@ const CalcRow = ({ label, value, muted, bold, positive, negative }) => (
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
- *   payroll: Object | null,
+ *   payrollId: string | null,
  *   canManage: boolean   — whether the current role may approve/reject/adjust/mark-paid
  * }} props
  */
-const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
+const PayrollDetailModal = ({ open, onClose, payrollId, canManage }) => {
   const toast          = useToast()
   const approveMutation = useApprovePayroll()
   const rejectMutation  = useRejectPayroll()
   const paidMutation    = useMarkPayrollPaid()
   const adjustMutation  = useAdjustPayroll()
+
+  // Sprint 8.2.6a: always fetch the newest backend data instead of
+  // reusing the (possibly stale) row object passed from the table.
+  // employeeId/outletId are populated with { _id, name } by
+  // getPayrollById() on the backend.
+  const {
+    data: payroll,
+    isLoading,
+    isError,
+    error,
+  } = usePayroll(payrollId, { enabled: open && !!payrollId })
 
   const [showAdjust, setShowAdjust] = useState(false)
 
@@ -141,7 +153,29 @@ const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
     }
   }, [open, payroll, reset])
 
-  if (!payroll) return null
+  if (!open) return null
+
+  // Loading state — acceptable per Sprint 8.2.6a spec (Task 2).
+  if (isLoading) {
+    return (
+      <Modal open={open} onClose={onClose} title="Payroll Detail" size="md">
+        <div className="flex items-center justify-center py-10 text-muted-foreground">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          Loading payroll…
+        </div>
+      </Modal>
+    )
+  }
+
+  if (isError || !payroll) {
+    return (
+      <Modal open={open} onClose={onClose} title="Payroll Detail" size="md">
+        <div className="py-10 text-center text-sm text-destructive">
+          {error?.response?.data?.message ?? 'Failed to load payroll record.'}
+        </div>
+      </Modal>
+    )
+  }
 
   const isDraft    = payroll.status === 'draft'
   const isApproved = payroll.status === 'approved'
@@ -153,21 +187,21 @@ const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
 
   const handleApprove = () => {
     approveMutation.mutate(payroll._id, {
-      onSuccess: () => { toast.success('Payroll approved'); onClose() },
+      onSuccess: () => { toast.success('Payroll approved') },
       onError:   (err) => toast.error('Approval failed', err?.response?.data?.message),
     })
   }
 
   const handleReject = () => {
     rejectMutation.mutate(payroll._id, {
-      onSuccess: () => { toast.success('Payroll reverted to draft'); onClose() },
+      onSuccess: () => { toast.success('Payroll reverted to draft') },
       onError:   (err) => toast.error('Rejection failed', err?.response?.data?.message),
     })
   }
 
   const handleMarkPaid = () => {
     paidMutation.mutate(payroll._id, {
-      onSuccess: () => { toast.success('Payroll marked as paid'); onClose() },
+      onSuccess: () => { toast.success('Payroll marked as paid') },
       onError:   (err) => toast.error('Failed', err?.response?.data?.message),
     })
   }
@@ -187,7 +221,6 @@ const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
         onSuccess: () => {
           toast.success('Payroll adjusted')
           setShowAdjust(false)
-          onClose()
         },
         onError: (err) => toast.error('Adjustment failed', err?.response?.data?.message),
       }
@@ -221,6 +254,9 @@ const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
           <div className="bg-muted/40 rounded-lg px-1">
             <InfoRow icon={User}     label="Employee" value={payroll.employeeId?.name ?? payroll.employeeId ?? '—'} />
             <InfoRow icon={Building2} label="Outlet"  value={payroll.outletId?.name  ?? payroll.outletId  ?? '—'} />
+            {/* P0.3.2: payrollType ('commission'/'fixed') is the engine used —
+                distinct from salaryType ('monthly'/'daily') shown above. */}
+            <InfoRow icon={TrendingUp} label="Salary Type" value={payroll.payrollType === 'commission' ? 'Commission' : 'Fixed'} />
             <InfoRow icon={Calendar} label="Base Salary" value={formatIDR(payroll.baseSalary)} />
           </div>
 
@@ -250,7 +286,18 @@ const PayrollDetailModal = ({ open, onClose, payroll, canManage }) => {
             </p>
             <div className="bg-muted/30 rounded-lg px-3 py-1">
               <CalcRow label="Salary Earned"  value={formatIDR(payroll.salaryEarned)} />
-              <CalcRow label="Commission"     value={`+ ${formatIDR(payroll.commission)}`}              positive={payroll.commission > 0} />
+              {/* P0.3.2.1: Revenue → Commission Rate → Commission Earned,
+                  in that order, so an owner can see the full chain at a
+                  glance. Revenue/rate are immutable snapshots persisted at
+                  generation time — shown only when this was a commission
+                  payroll (both are 0/unused for fixed-type payrolls). */}
+              {payroll.payrollType === 'commission' && (
+                <>
+                  <CalcRow label="Revenue"         value={formatIDR(payroll.totalRevenue)} />
+                  <CalcRow label="Commission Rate" value={`${payroll.commissionPercentage ?? 0}%`} />
+                </>
+              )}
+              <CalcRow label="Commission Earned" value={`+ ${formatIDR(payroll.commission)}`}              positive={payroll.commission > 0} />
               <CalcRow label="Cups Bonus"     value={`+ ${formatIDR(payroll.cupsBonus)}`}    positive />
               <CalcRow label="Meal Allowance" value={`+ ${formatIDR(payroll.mealAllowanceTotal)}`}       positive={payroll.mealAllowanceTotal > 0} />
               <CalcRow label="Daily Tier Bonus"        value={`+ ${formatIDR(payroll.dailyTierBonus)}`}          positive={payroll.dailyTierBonus > 0} />

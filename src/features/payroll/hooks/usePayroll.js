@@ -57,10 +57,11 @@ export const useAdjustPayroll = () => {
     mutationFn: ({ payrollId, payload }) =>
       adjustPayroll(payrollId, payload),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['payrolls'],
-      })
+    // Sprint 8.2.6a: also invalidate the single-record query so
+    // PayrollDetailModal (now fetching live via usePayroll) refreshes.
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['payrolls'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll', variables.payrollId] })
     },
   })
 }
@@ -71,10 +72,9 @@ export const useApprovePayroll = () => {
   return useMutation({
     mutationFn: approvePayroll,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['payrolls'],
-      })
+    onSuccess: (_data, payrollId) => {
+      queryClient.invalidateQueries({ queryKey: ['payrolls'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll', payrollId] })
     },
   })
 }
@@ -85,10 +85,9 @@ export const useRejectPayroll = () => {
   return useMutation({
     mutationFn: rejectPayroll,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['payrolls'],
-      })
+    onSuccess: (_data, payrollId) => {
+      queryClient.invalidateQueries({ queryKey: ['payrolls'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll', payrollId] })
     },
   })
 }
@@ -99,10 +98,9 @@ export const useMarkPayrollPaid = () => {
   return useMutation({
     mutationFn: markPayrollPaid,
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['payrolls'],
-      })
+    onSuccess: (_data, payrollId) => {
+      queryClient.invalidateQueries({ queryKey: ['payrolls'] })
+      queryClient.invalidateQueries({ queryKey: ['payroll', payrollId] })
     },
   })
 }

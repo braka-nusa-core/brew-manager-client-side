@@ -187,8 +187,11 @@ const RowActions = ({ payroll, onView }) => {
 
 // ── Main Table ────────────────────────────────────────────────
 
-const PayrollTable = ({ payrolls }) => {
-  const [selectedPayroll, setSelectedPayroll] = useState(null)
+const PayrollTable = ({ payrolls, canManage }) => {
+  // Sprint 8.2.6a: only the id is kept — PayrollDetailModal now fetches
+  // its own live data via usePayroll(payrollId) instead of reusing this
+  // row's (potentially stale) list data.
+  const [selectedPayrollId, setSelectedPayrollId] = useState(null)
 
   // Resolve ObjectId → entity
   const { employeeMap, outletMap } = useEntityMap()
@@ -243,7 +246,7 @@ const PayrollTable = ({ payrolls }) => {
             return (
               <DataTable.Row
                 key={p._id}
-                onClick={() => setSelectedPayroll(p)}
+                onClick={() => setSelectedPayrollId(p._id)}
                 className="cursor-pointer"
               >
                 {/* Employee */}
@@ -308,18 +311,19 @@ const PayrollTable = ({ payrolls }) => {
                   </span>
                 </DataTable.Cell>
 
-                {/* Bonus */}
+                {/* Bonus — Sprint 8.2.6a: cupsBonus is legacy (always 0
+                    under the v2.0 engine); total bonus is now the sum of
+                    dailyTierBonus + weeklyAttendanceBonus + manualBonus.
+                    Display only, no calculation logic changed. */}
                 <DataTable.Cell className="hidden xl:table-cell">
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     <p>
-                      Cups: +{formatIDR(p.cupsBonus)}
+                      Bonus: +{formatIDR(
+                        (p.dailyTierBonus ?? 0) +
+                        (p.weeklyAttendanceBonus ?? 0) +
+                        (p.manualBonus ?? 0)
+                      )}
                     </p>
-
-                    {p.manualBonus > 0 && (
-                      <p>
-                        Manual: +{formatIDR(p.manualBonus)}
-                      </p>
-                    )}
 
                     {p.deductions > 0 && (
                       <p className="text-destructive/70">
@@ -352,7 +356,7 @@ const PayrollTable = ({ payrolls }) => {
                 >
                   <RowActions
                     payroll={p}
-                    onView={setSelectedPayroll}
+                    onView={(row) => setSelectedPayrollId(row._id)}
                   />
                 </DataTable.Cell>
               </DataTable.Row>
@@ -362,9 +366,10 @@ const PayrollTable = ({ payrolls }) => {
       </DataTable>
 
       <PayrollDetailModal
-        open={!!selectedPayroll}
-        onClose={() => setSelectedPayroll(null)}
-        payroll={selectedPayroll}
+        open={!!selectedPayrollId}
+        onClose={() => setSelectedPayrollId(null)}
+        payrollId={selectedPayrollId}
+        canManage={canManage}
       />
     </>
   )
