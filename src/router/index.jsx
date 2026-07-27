@@ -69,6 +69,7 @@ import InventoryBatchDetailPage   from '../pages/InventoryBatchDetailPage'
 import InventoryAdjustmentPage       from '../pages/InventoryAdjustmentPage'
 import InventoryAdjustmentDetailPage from '../pages/InventoryAdjustmentDetailPage'
 import ProductionListPage      from '../pages/ProductionListPage'
+import ProductionDashboardPage from '../pages/ProductionDashboardPage'
 import ProductionDetailPage    from '../pages/ProductionDetailPage'
 import BikesPage       from '../pages/BikesPage'
 import BikeAssignmentsPage from '../pages/BikeAssignmentsPage'
@@ -113,6 +114,7 @@ const router = createBrowserRouter([
           { path: '/inventory/adjustments', element: <InventoryAdjustmentPage/> },
           { path: '/inventory/adjustments/:adjustmentId', element: <InventoryAdjustmentDetailPage/> },
           { path: '/production', element: <ProductionListPage/> },
+          { path: '/production/dashboard', element: <ProductionDashboardPage/> },
           { path: '/production/:productionId', element: <ProductionDetailPage/> },
           { path: '/bikes',             element: <BikesPage/> },
           { path: '/bike-assignments',  element: <BikeAssignmentsPage/> },

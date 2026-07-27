@@ -5,6 +5,14 @@
 // (the exact same product-search component already used by
 // InventoryAdjustmentModal/StockOpnameModal) — not duplicated here.
 //
+// Sprint 8.2.1 — passes source="catalog" so the picker reads from the
+// Product catalog (GET /products) instead of Inventory. Production is
+// how the FIRST batch for a product gets created, so it must not depend
+// on inventory already existing (that was a bootstrap circular
+// dependency: Product → Production → Inventory instead of
+// Inventory → Production). InventoryAdjustmentModal/StockOpnameModal are
+// unaffected — they keep the default source="inventory".
+//
 // Pattern follows InventoryAdjustmentModal.jsx / StockOpnameModal.jsx
 // (react-hook-form + zod, Modal shared component, useToast on success/error).
 
@@ -93,6 +101,7 @@ const RecordProductionModal = ({ open, onClose }) => {
                 onChange={field.onChange}
                 error={!!errors.productId}
                 disabled={productionMutation.isPending}
+                source="catalog"
               />
             )}
           />
