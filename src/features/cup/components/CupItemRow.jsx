@@ -18,8 +18,9 @@
 // Duplicate productId prevention: parent passes `selectedIds` (other rows' ids)
 // so this row's own dropdown excludes them but keeps its current selection.
 
-import { Trash2 } from 'lucide-react'
+import { Trash2, Loader2 } from 'lucide-react'
 import { Select, Input } from '@/components/shared/FormField'
+import { useInventoryProductDetail } from '@/features/inventory/hooks/useInventory'
 import { cn } from '@/lib/utils'
 
 /**
@@ -69,6 +70,17 @@ const CupItemRow = ({
 
   const hasError = !!errors?.productId
 
+  // Available stock for the currently selected product — backend-computed
+  // (InventoryOverview.summary.totalRemaining), not calculated here.
+  // Reuses the exact same hook/endpoint as the Inventory feature
+  // (useInventoryProductDetail) — no new API surface introduced.
+  // `enabled: !!currentProductId` keeps this from firing until a
+  // product is actually chosen; React Query caches by productId, so
+  // re-selecting an already-seen product across rows does not refetch.
+  const { data: stockDetail, isLoading: stockLoading } =
+    useInventoryProductDetail(currentProductId)
+  const availableStock = stockDetail?.summary?.totalRemaining
+
   return (
     <div className={cn(
       'rounded-lg border bg-card p-3 space-y-2.5',
@@ -96,6 +108,15 @@ const CupItemRow = ({
           </Select>
           {errors?.productId && (
             <p className="text-[11px] text-destructive mt-1">{errors.productId.message}</p>
+          )}
+          {currentProductId && (
+            <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+              {stockLoading ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <>Available Stock: <strong className="text-foreground">{availableStock ?? 0} cup</strong></>
+              )}
+            </p>
           )}
         </div>
 
