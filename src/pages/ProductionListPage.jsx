@@ -28,6 +28,7 @@ import RecordProductionModal   from '@/features/production/components/RecordProd
 import { useProductionList }   from '@/features/production/hooks/useProduction'
 import useDebounce       from '@/hooks/useDebounce'
 import { useAuthStore, selectUserRole } from '@/store/authStore'
+import { useEffectiveOutletId } from '@/store/activeOutletStore'
 import { hasPermission, PERMISSIONS } from '@/constants/permissions'
 import { cn }             from '@/lib/utils'
 
@@ -60,6 +61,7 @@ const ProductionListPage = () => {
   const navigate = useNavigate()
   const role = useAuthStore(selectUserRole)
   const canManage = hasPermission(role, PERMISSIONS.MANAGE_INVENTORY)
+  const effectiveOutletId = useEffectiveOutletId()
 
   const [page,     setPage]     = useState(1)
   const [search,   setSearch]   = useState('')
@@ -75,6 +77,7 @@ const ProductionListPage = () => {
     page,
     limit:    PAGE_SIZE,
     search:   debouncedSearch || undefined,
+    outletId: effectiveOutletId || undefined,
     // period is a quick-filter shortcut; a custom dateFrom/dateTo (below)
     // only takes effect once period is cleared back to "Semua" — matches
     // the backend's own precedence rule (period wins if both are set).

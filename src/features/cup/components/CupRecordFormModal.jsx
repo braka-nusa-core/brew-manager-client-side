@@ -36,6 +36,7 @@ import { useProducts }                        from '@/features/product/hooks/use
 import useEntityMap                           from '@/hooks/useEntityMap'
 import useToast                               from '@/hooks/useToast'
 import useDebounce                            from '@/hooks/useDebounce'
+import { useEffectiveOutletId }               from '@/store/activeOutletStore'
 import { cn }                                 from '@/lib/utils'
 
 // ── Zod helpers ───────────────────────────────────────────────
@@ -141,8 +142,16 @@ const CupRecordFormModal = ({ open, onClose, record = null }) => {
   const [riderSearch, setRiderSearch]       = useState('')
   const debouncedRiderSearch                = useDebounce(riderSearch, 300)
 
+  const effectiveOutletId = useEffectiveOutletId()
+
   const { data: ridersData, isLoading: ridersLoading } = useEmployees(
-    { search: debouncedRiderSearch, isRider: true, isActive: true, limit: 20 },
+    {
+      search:    debouncedRiderSearch,
+      isRider:   true,
+      isActive:  true,
+      outletId:  effectiveOutletId || undefined,
+      limit:     20,
+    },
     { enabled: open && !isEdit }
   )
   const riders = ridersData?.data ?? []
