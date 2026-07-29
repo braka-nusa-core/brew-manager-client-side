@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  previewPayroll,
   generatePayroll,
   getPayrolls,
   getPayroll,
@@ -35,6 +36,14 @@ export const usePayroll = (payrollId, options = {}) => {
 // ─────────────────────────────────────────────────────────────
 // Mutations
 // ─────────────────────────────────────────────────────────────
+
+export const usePreviewPayroll = () => {
+  return useMutation({
+    mutationFn: previewPayroll,
+    // No invalidation — preview never persists anything, so there
+    // is no cached query to refresh.
+  })
+}
 
 export const useGeneratePayroll = () => {
   const queryClient = useQueryClient()

@@ -2,6 +2,7 @@
 // All payroll HTTP calls — no logic, no state.
 //
 // Backend endpoints (confirmed from payroll.routes.js):
+//   POST   /payroll/preview           → body: { outletId, month, year, workingDays }
 //   POST   /payroll/generate          → body: { outletId, month, year, workingDays }
 //   GET    /payroll                   → query: { page, limit, outletId, month, year, status, employeeId }
 //   GET    /payroll/:id               → single record
@@ -24,6 +25,16 @@
 //   status, generatedBy, approvedBy, generatedAt, approvedAt
 
 import apiClient from '@/lib/axios'
+
+/**
+ * Preview payroll for all active employees in an outlet for a period.
+ * Read-only — never persists. Safe to call repeatedly.
+ * @param {{ outletId: string, month: number, year: number, workingDays: number }} payload
+ */
+export const previewPayroll = async (payload) => {
+  const { data } = await apiClient.post('/payroll/preview', payload)
+  return data // { success, message, data: { outletId, period, workingDays, employees, summary } }
+}
 
 /**
  * Generate payroll for all active employees in an outlet for a period.

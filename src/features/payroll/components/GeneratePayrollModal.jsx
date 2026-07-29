@@ -17,20 +17,34 @@ import {
   CheckCircle2,
   AlertTriangle,
   TriangleAlert,
+  Lock,
+  Eye,
 } from 'lucide-react'
 
 import Modal from '@/components/shared/Modal'
+import DataTable from '@/components/shared/DataTable'
 import FormField, {
   Input,
   Select,
 } from '@/components/shared/FormField'
 
-import { useGeneratePayroll } from '../hooks/usePayroll'
+import { usePreviewPayroll, useGeneratePayroll } from '../hooks/usePayroll'
 import { useEffectiveOutletId } from '@/store/activeOutletStore'
 
 import useToast from '@/hooks/useToast'
 
 import { cn } from '@/lib/utils'
+
+// ── Formatters (mirrors PayrollTable.jsx / PayrollDetailModal.jsx) ──
+
+const formatIDR = (val) =>
+  val != null
+    ? new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+      }).format(val)
+    : '—'
 
 // ── Zod schema ────────────────────────────────────────────────
 //
@@ -164,6 +178,146 @@ const GenerateResult = ({ result, onClose }) => (
   </div>
 )
 
+// ── Preview screen ────────────────────────────────────────────
+
+const PreviewScreen = ({ preview, onBack, onConfirm, isConfirming }) => {
+  const employees = preview?.employees ?? []
+  const summary    = preview?.summary ?? { totalEmployees: 0, totalPayrollCost: 0 }
+
+  return (
+    <div className="space-y-4">
+      <div className="max-h-[45vh] overflow-y-auto border border-border rounded-lg">
+        <DataTable>
+          <DataTable.Head>
+            <DataTable.HeadRow>
+              <DataTable.HeadCell>Employee</DataTable.HeadCell>
+              <DataTable.HeadCell>Attendance</DataTable.HeadCell>
+              <DataTable.HeadCell>Revenue</DataTable.HeadCell>
+              <DataTable.HeadCell>Salary</DataTable.HeadCell>
+              <DataTable.HeadCell>Meal Allowance</DataTable.HeadCell>
+              <DataTable.HeadCell>Daily Tier Bonus</DataTable.HeadCell>
+              <DataTable.HeadCell>Weekly Bonus</DataTable.HeadCell>
+              <DataTable.HeadCell>Total Pay</DataTable.HeadCell>
+            </DataTable.HeadRow>
+          </DataTable.Head>
+
+          <DataTable.Body>
+            {employees.map((emp) => (
+              <DataTable.Row key={emp.employeeId}>
+                <DataTable.Cell>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {emp.employeeName}
+                    </p>
+
+                    {emp.alreadyLocked && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                        <Lock className="w-2.5 h-2.5" />
+                        Locked
+                      </span>
+                    )}
+                  </div>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                    <span className="text-brand-600 font-medium">
+                      {emp.presentDays}P
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-muted-foreground">
+                      {emp.absentDays}A
+                    </span>
+                  </div>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {formatIDR(emp.totalRevenue)}
+                  </span>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <span className="text-sm tabular-nums text-foreground">
+                    {formatIDR(emp.salaryEarned)}
+                  </span>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {formatIDR(emp.mealAllowanceTotal)}
+                  </span>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {formatIDR(emp.dailyTierBonus)}
+                  </span>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {formatIDR(emp.weeklyAttendanceBonus)}
+                  </span>
+                </DataTable.Cell>
+
+                <DataTable.Cell>
+                  <span className="text-sm font-bold tabular-nums text-foreground">
+                    {formatIDR(emp.totalPay)}
+                  </span>
+                </DataTable.Cell>
+              </DataTable.Row>
+            ))}
+          </DataTable.Body>
+        </DataTable>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 rounded-lg bg-muted border border-border">
+          <p className="text-2xl font-bold text-foreground">
+            {summary.totalEmployees}
+          </p>
+          <p className="text-xs text-muted-foreground">Total Employees</p>
+        </div>
+
+        <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900">
+          <p className="text-2xl font-bold text-brand-700 dark:text-brand-400">
+            {formatIDR(summary.totalPayrollCost)}
+          </p>
+          <p className="text-xs text-brand-600 dark:text-brand-500">Total Payroll Cost</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex justify-end gap-3 pt-4 border-t border-border">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isConfirming}
+          className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          Back
+        </button>
+
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={isConfirming}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
+            'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
+            'disabled:opacity-60 disabled:cursor-not-allowed'
+          )}
+        >
+          {isConfirming && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {isConfirming ? 'Generating…' : 'Confirm & Generate Payroll'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────
 
 const GeneratePayrollModal = ({ open, onClose }) => {
@@ -175,9 +329,18 @@ const GeneratePayrollModal = ({ open, onClose }) => {
   const effectiveOutletId = useEffectiveOutletId()
   const hasWorkingOutlet  = !!effectiveOutletId
 
+  const previewMutation  = usePreviewPayroll()
   const generateMutation = useGeneratePayroll()
 
+  // step: 'form' | 'preview' | 'result'
+  const [step, setStep] = useState('form')
+  const [previewData, setPreviewData] = useState(null)
   const [result, setResult] = useState(null)
+
+  // Payload built at Preview time, reused unchanged for Generate —
+  // Generate re-runs the same calculation server-side regardless,
+  // this is just what the confirm button sends.
+  const [pendingPayload, setPendingPayload] = useState(null)
 
   // ── Form ───────────────────────────────────────────────────
 
@@ -207,7 +370,10 @@ const GeneratePayrollModal = ({ open, onClose }) => {
       workingDays: 26,
     })
 
+    setStep('form')
+    setPreviewData(null)
     setResult(null)
+    setPendingPayload(null)
   }, [open, reset])
 
   // ── Close handler ──────────────────────────────────────────
@@ -215,69 +381,112 @@ const GeneratePayrollModal = ({ open, onClose }) => {
   const handleClose = () => {
     reset()
 
+    setStep('form')
+    setPreviewData(null)
     setResult(null)
+    setPendingPayload(null)
 
     onClose()
   }
 
-  // ── Submit ────────────────────────────────────────────────
+  // ── Step 1 → Preview ──────────────────────────────────────
 
   const onSubmit = (data) => {
     // No Working Outlet selected ("All Outlets") — not a valid context
-    // for generation. Blocked in the UI below, but guard here too in
-    // case of a stray submit.
+    // for preview/generation. Blocked in the UI below, but guard here
+    // too in case of a stray submit.
     if (!hasWorkingOutlet) return
 
-    generateMutation.mutate(
-      {
-        outletId: effectiveOutletId,
-        month: Number(data.month),
-        year: Number(data.year),
-        workingDays: Number(data.workingDays),
+    const payload = {
+      outletId: effectiveOutletId,
+      month: Number(data.month),
+      year: Number(data.year),
+      workingDays: Number(data.workingDays),
+    }
+
+    previewMutation.mutate(payload, {
+      onSuccess: (res) => {
+        setPendingPayload(payload)
+        setPreviewData(res.data ?? null)
+        setStep('preview')
       },
-      {
-        onSuccess: (res) => {
-          const resData = res.data ?? {}
 
-          setResult({
-            generated: resData.generated ?? 0,
-            skipped: resData.skipped ?? 0,
-            skippedItems: resData.skippedItems ?? [],
-          })
+      onError: (err) => {
+        toast.error(
+          'Preview failed',
+          err?.response?.data?.message ??
+            'Please check your inputs'
+        )
+      },
+    })
+  }
 
-          if ((resData.generated ?? 0) > 0) {
-            toast.success(
-              'Payroll generated',
-              `${resData.generated} record${
-                resData.generated !== 1 ? 's' : ''
-              } created`
-            )
-          }
-        },
+  // ── Preview → Back ────────────────────────────────────────
 
-        onError: (err) => {
-          toast.error(
-            'Generation failed',
-            err?.response?.data?.message ??
-              'Please check your inputs'
+  const handleBackToForm = () => {
+    setStep('form')
+  }
+
+  // ── Preview → Confirm & Generate ─────────────────────────
+
+  const handleConfirmGenerate = () => {
+    if (!pendingPayload) return
+
+    generateMutation.mutate(pendingPayload, {
+      onSuccess: (res) => {
+        const resData = res.data ?? {}
+
+        setResult({
+          generated: resData.generated ?? 0,
+          skipped: resData.skipped ?? 0,
+          skippedItems: resData.skippedItems ?? [],
+        })
+
+        setStep('result')
+
+        if ((resData.generated ?? 0) > 0) {
+          toast.success(
+            'Payroll generated',
+            `${resData.generated} record${
+              resData.generated !== 1 ? 's' : ''
+            } created`
           )
-        },
-      }
-    )
+        }
+      },
+
+      onError: (err) => {
+        toast.error(
+          'Generation failed',
+          err?.response?.data?.message ??
+            'Please check your inputs'
+        )
+      },
+    })
   }
 
   return (
     <Modal
       open={open}
       onClose={handleClose}
-      title="Generate Payroll"
-      description="Generate payroll records for all active employees in an outlet."
-      size="md"
+      title={step === 'preview' ? 'Preview Payroll' : 'Generate Payroll'}
+      description={
+        step === 'preview'
+          ? 'Review calculated payroll before generating. This is not yet saved.'
+          : 'Generate payroll records for all active employees in an outlet.'
+      }
+      size={step === 'preview' ? 'lg' : 'md'}
     >
-      {result ? (
+      {step === 'result' && result ? (
         <GenerateResult
           result={result}
           onClose={handleClose}
+        />
+      ) : step === 'preview' ? (
+        <PreviewScreen
+          preview={previewData}
+          onBack={handleBackToForm}
+          onConfirm={handleConfirmGenerate}
+          isConfirming={generateMutation.isPending}
         />
       ) : (
         <form
@@ -306,7 +515,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
                 <Select
                   {...register('month')}
                   error={!!errors.month?.message}
-                  disabled={generateMutation.isPending}
+                  disabled={previewMutation.isPending}
                 >
                   {MONTHS.map((m, i) => (
                     <option
@@ -327,7 +536,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
                 <Select
                   {...register('year')}
                   error={!!errors.year?.message}
-                  disabled={generateMutation.isPending}
+                  disabled={previewMutation.isPending}
                 >
                   {[
                     currentYear - 1,
@@ -358,7 +567,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
                 min="1"
                 max="31"
                 error={!!errors.workingDays?.message}
-                disabled={generateMutation.isPending}
+                disabled={previewMutation.isPending}
               />
 
               <p className="text-[11px] text-muted-foreground mt-1">
@@ -375,7 +584,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
             <button
               type="button"
               onClick={handleClose}
-              disabled={generateMutation.isPending}
+              disabled={previewMutation.isPending}
               className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
             >
               Cancel
@@ -383,20 +592,22 @@ const GeneratePayrollModal = ({ open, onClose }) => {
 
             <button
               type="submit"
-              disabled={generateMutation.isPending || !hasWorkingOutlet}
+              disabled={previewMutation.isPending || !hasWorkingOutlet}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
                 'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors',
                 'disabled:opacity-60 disabled:cursor-not-allowed'
               )}
             >
-              {generateMutation.isPending && (
+              {previewMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Eye className="w-3.5 h-3.5" />
               )}
 
-              {generateMutation.isPending
-                ? 'Generating…'
-                : 'Generate Payroll'}
+              {previewMutation.isPending
+                ? 'Loading Preview…'
+                : 'Preview Payroll'}
             </button>
           </div>
         </form>
