@@ -1,9 +1,3 @@
-// src/pages/EmployeesPage.jsx
-// Employee management page.
-// Wired to: useEmployees (TanStack Query) → employeeApi → GET /api/v1/employees
-// All CRUD actions: Add (EmployeeFormModal), Edit (EmployeeTable → EmployeeFormModal),
-//                  Toggle-active (RowActions), Delete (DeleteConfirmDialog)
-
 import { useState }          from 'react'
 import { UserPlus, Users }   from 'lucide-react'
 
@@ -24,8 +18,6 @@ import { cn }                 from '@/lib/utils'
 
 const PAGE_SIZE = 15
 
-// Roles that can manage (create/edit/toggle/remove) employees — mirrors
-// backend's MANAGE_EMPLOYEES grant (super_admin, tenant_admin, manager).
 const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
 
 const STATUS_FILTERS = [

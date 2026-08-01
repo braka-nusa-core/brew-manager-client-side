@@ -1,10 +1,3 @@
-// src/features/sales/components/SalesTable.jsx
-// Sales data table — matches actual backend Sale model:
-//   { employeeId, outletId, date, totalCups, totalRevenue, notes }
-//
-// Fix: employeeId and outletId are raw ObjectId strings from backend
-// (not populated). Names resolved via useEntityMap() lookup maps.
-
 import { Coffee }                                 from 'lucide-react'
 
 import DataTable                                  from '@/components/shared/DataTable'
@@ -66,12 +59,12 @@ const SalesTable = ({ sales }) => {
       <DataTable>
         <DataTable.Head>
           <DataTable.HeadRow>
-            <DataTable.HeadCell>Employee</DataTable.HeadCell>
-            <DataTable.HeadCell>Date</DataTable.HeadCell>
-            <DataTable.HeadCell>Cups</DataTable.HeadCell>
-            <DataTable.HeadCell>Revenue</DataTable.HeadCell>
+            <DataTable.HeadCell>Karyawan</DataTable.HeadCell>
+            <DataTable.HeadCell>Tanggal</DataTable.HeadCell>
+            <DataTable.HeadCell>Jumlah Cup</DataTable.HeadCell>
+            <DataTable.HeadCell>Total Penjualan</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden lg:table-cell">Outlet</DataTable.HeadCell>
-            <DataTable.HeadCell className="hidden xl:table-cell">Notes</DataTable.HeadCell>
+            <DataTable.HeadCell className="hidden xl:table-cell">Catatan</DataTable.HeadCell>
           </DataTable.HeadRow>
         </DataTable.Head>
 

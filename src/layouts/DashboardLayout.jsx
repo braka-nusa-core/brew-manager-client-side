@@ -1,13 +1,3 @@
-// ============================================================
-// layouts/DashboardLayout.jsx
-// Main shell layout: sidebar (left) + navbar (top) + content.
-//
-// Features:
-//   - Collapsible sidebar with localStorage persistence
-//   - Mobile sidebar as overlay drawer
-//   - Responsive: sidebar hidden on mobile, toggle via hamburger
-// ============================================================
-
 import { useState, useEffect } from 'react'
 import { Outlet }              from 'react-router-dom'
 import Sidebar                 from '@/components/shared/Sidebar'

@@ -1,8 +1,3 @@
-// src/features/payroll/components/PayrollStatusBadge.jsx
-// Displays payroll status as a colored badge.
-// Matches backend enum: 'draft' | 'approved' | 'paid'
-// Mirrors AttendanceStatusBadge and PaymentMethodBadge patterns.
-
 import { FileText, CheckCircle2, Banknote } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,13 +9,13 @@ const STATUS_CONFIG = {
     dot:   'bg-zinc-400',
   },
   approved: {
-    label: 'Approved',
+    label: 'Disetujui',
     icon:  CheckCircle2,
     badge: 'bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400',
     dot:   'bg-brand-500',
   },
   paid: {
-    label: 'Paid',
+    label: 'Dibayar',
     icon:  Banknote,
     badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400',
     dot:   'bg-emerald-500',
@@ -28,7 +23,7 @@ const STATUS_CONFIG = {
 }
 
 const DEFAULT = {
-  label: 'Unknown',
+  label: 'Tidak diketahui',
   icon:  null,
   badge: 'bg-zinc-100 text-zinc-500',
   dot:   'bg-zinc-300',

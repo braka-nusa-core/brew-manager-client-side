@@ -1,11 +1,5 @@
-// src/features/employee/components/EmployeeStatusBadge.jsx
 import { cn } from '@/lib/utils'
 
-/**
- * Displays employee active/inactive status as a badge.
- *
- * @param {{ isActive: boolean, className?: string }} props
- */
 const EmployeeStatusBadge = ({ isActive, className }) => (
   <span
     className={cn(
@@ -20,7 +14,7 @@ const EmployeeStatusBadge = ({ isActive, className }) => (
       'w-1.5 h-1.5 rounded-full',
       isActive ? 'bg-brand-500' : 'bg-zinc-400'
     )} />
-    {isActive ? 'Active' : 'Inactive'}
+    {isActive ? 'Aktif' : 'Tidak aktif'}
   </span>
 )
 

@@ -28,26 +28,26 @@ import { cn }                                 from '@/lib/utils'
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i
 
 const bulkSchema = z.object({
-  date: z.string().min(1, 'Date is required'),
+  date: z.string().min(1, 'Tanggal harus diisi'),
   attendances: z.array(
     z.object({
-      employeeId: z.string().regex(OBJECT_ID_RE, 'Select an employee'),
+      employeeId: z.string().regex(OBJECT_ID_RE, 'Pilih karyawan'),
       status:     z.enum(['present', 'absent', 'late', 'leave', 'holiday'], {
-        required_error: 'Status required',
+        required_error: 'Status harus diisi',
       }),
       notes: z.string().max(200).optional().or(z.literal('')),
     })
-  ).min(1, 'Add at least one employee entry'),
+  ).min(1, 'Tambahkan setidaknya satu entri karyawan'),
 })
 
 // ── Status config ──────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  present: { label: 'Present',  color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  late:    { label: 'Late',     color: 'bg-amber-100   text-amber-700   border-amber-200'   },
-  absent:  { label: 'Absent',   color: 'bg-red-100     text-red-700     border-red-200'     },
-  leave:   { label: 'On Leave', color: 'bg-blue-100    text-blue-700    border-blue-200'    },
-  holiday: { label: 'Holiday',  color: 'bg-violet-100  text-violet-700  border-violet-200'  },
+  present: { label: 'Hadir',  color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  late:    { label: 'Terlambat',     color: 'bg-amber-100   text-amber-700   border-amber-200'   },
+  absent:  { label: 'Tidak Hadir',   color: 'bg-red-100     text-red-700     border-red-200'     },
+  leave:   { label: 'Cuti', color: 'bg-blue-100    text-blue-700    border-blue-200'    },
+  holiday: { label: 'Libur',  color: 'bg-violet-100  text-violet-700  border-violet-200'  },
 }
 
 // ── Result Summary ──────────────────────────────────────────────
@@ -59,7 +59,7 @@ const BulkResultSummary = ({ result, onClose }) => (
         <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
         <div>
           <p className="text-2xl font-bold text-emerald-700">{result.successCount}</p>
-          <p className="text-xs text-emerald-600">Records inserted</p>
+          <p className="text-xs text-emerald-600">Data berhasil ditambahkan</p>
         </div>
       </div>
       <div className={cn(
@@ -71,14 +71,14 @@ const BulkResultSummary = ({ result, onClose }) => (
           <p className={cn('text-2xl font-bold', result.failedCount > 0 ? 'text-red-700' : 'text-zinc-400')}>
             {result.failedCount}
           </p>
-          <p className="text-xs text-muted-foreground">Failed / Skipped</p>
+          <p className="text-xs text-muted-foreground">Gagal / Dilewati</p>
         </div>
       </div>
     </div>
 
     {result.failedItems?.length > 0 && (
       <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Failed entries</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Data gagal ditambahkan</p>
         <div className="space-y-1.5 max-h-40 overflow-y-auto">
           {result.failedItems.map((item, i) => (
             <div key={i} className="flex items-start gap-2 text-xs p-2 rounded-lg bg-muted">
@@ -95,7 +95,7 @@ const BulkResultSummary = ({ result, onClose }) => (
         onClick={onClose}
         className="px-4 py-2 text-sm font-semibold rounded-lg bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors"
       >
-        Done
+        Selesai
       </button>
     </div>
   </div>
@@ -127,13 +127,13 @@ const EmployeeSelector = ({ control, index, error, disabled, open }) => {
           getValue={(e) => e._id}
           onSearchChange={setSearch}
           isLoading={isLoading}
-          placeholder="Search and select employee…"
+          placeholder="Cari dan pilih karyawan..."
           error={!!error}
           disabled={disabled}
           emptyMessage={
             debouncedSearch
-              ? `No employees matching "${debouncedSearch}"`
-              : 'Start typing to search employees.'
+              ? `Tidak ada karyawan yang cocok "${debouncedSearch}"`
+              : 'Mulai mengetik untuk mencari karyawan.'
           }
         />
       )}
@@ -177,7 +177,7 @@ const EntryCard = ({ field, index, control, register, errors, isPending, open, c
               ? 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
               : 'text-muted-foreground/20 cursor-not-allowed'
           )}
-          title={canRemove ? 'Remove entry' : 'At least one entry required'}
+          title={canRemove ? 'Hapus entri' : 'Setidaknya satu entri diperlukan'}
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -186,7 +186,7 @@ const EntryCard = ({ field, index, control, register, errors, isPending, open, c
       {/* Employee selector — full width */}
       <div>
         <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-          Employee <span className="text-destructive">*</span>
+          Karyawan <span className="text-destructive">*</span>
         </label>
         <EmployeeSelector
           control={control}
@@ -223,11 +223,11 @@ const EntryCard = ({ field, index, control, register, errors, isPending, open, c
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-            Notes <span className="text-muted-foreground/50 font-normal">(optional)</span>
+            Catatan <span className="text-muted-foreground/50 font-normal">(opsional)</span>
           </label>
           <Input
             {...register(`attendances.${index}.notes`)}
-            placeholder="e.g. Sick leave"
+            placeholder="e.g. Sakit"
             disabled={isPending}
           />
         </div>
@@ -284,11 +284,11 @@ const BulkAttendanceModal = ({ open, onClose }) => {
           failedItems:  d.failedItems  ?? [],
         })
         if ((d.successCount ?? d.inserted ?? 0) > 0) {
-          toast.success('Bulk attendance submitted', `${d.successCount ?? d.inserted} records inserted`)
+          toast.success('Data kehadiran massal telah dikirimkan.', `${d.successCount ?? d.inserted} Data berhasil ditambahkan`)
         }
       },
       onError: (err) => {
-        toast.error('Bulk submission failed', err?.response?.data?.message ?? 'Please check your inputs')
+        toast.error('Gagal mengirimkan data kehadiran massal', err?.response?.data?.message ?? 'Silahkan periksa kembali inputan Anda')
       },
     })
   }
@@ -297,8 +297,8 @@ const BulkAttendanceModal = ({ open, onClose }) => {
     <Modal
       open={open}
       onClose={handleClose}
-      title="Bulk Attendance Input"
-      description="Record attendance for multiple employees on one date."
+      title="Input Kehadiran Massal"
+      description="Catat kehadiran untuk beberapa karyawan pada satu tanggal."
       size="lg"
     >
       {result ? (
@@ -308,7 +308,7 @@ const BulkAttendanceModal = ({ open, onClose }) => {
           <div className="space-y-4">
 
             {/* Date */}
-            <FormField label="Attendance Date" error={errors.date?.message} required>
+            <FormField label="Tanggal Kehadiran" error={errors.date?.message} required>
               <Input
                 {...register('date')}
                 type="date"
@@ -322,9 +322,9 @@ const BulkAttendanceModal = ({ open, onClose }) => {
               {/* Section header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">Employees</p>
+                  <p className="text-sm font-semibold text-foreground">Karyawan</p>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {fields.length} {fields.length === 1 ? 'entry' : 'entries'}
+                    {fields.length} {fields.length === 1 ? 'entri' : 'entri'}
                   </span>
                 </div>
                 <button
@@ -338,7 +338,7 @@ const BulkAttendanceModal = ({ open, onClose }) => {
                   )}
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  Add Employee
+                  Tambah Karyawan
                 </button>
               </div>
 
@@ -392,8 +392,8 @@ const BulkAttendanceModal = ({ open, onClose }) => {
               >
                 {bulkMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {bulkMutation.isPending
-                  ? `Submitting…`
-                  : `Submit ${fields.length} Record${fields.length !== 1 ? 's' : ''}`
+                  ? `Mengirimkan…`
+                  : `Kirim ${fields.length} Data`
                 }
               </button>
             </div>

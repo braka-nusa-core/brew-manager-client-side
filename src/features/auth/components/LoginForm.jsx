@@ -28,10 +28,10 @@ const LoginForm = () => {
 
   const validate = () => {
     const errors = {}
-    if (!form.email.trim())    errors.email    = 'Email is required'
+    if (!form.email.trim())    errors.email    = 'Email wajib diisi!'
     else if (!/\S+@\S+\.\S+/.test(form.email))
-                               errors.email    = 'Enter a valid email address'
-    if (!form.password.trim()) errors.password = 'Password is required'
+                               errors.email    = 'Masukkan alamat email yang valid'
+    if (!form.password.trim()) errors.password = 'Password wajib diisi!'
     return errors
   }
 
@@ -49,7 +49,7 @@ const LoginForm = () => {
 
   // Extract server error message
   const serverError = loginMutation.error
-    ? (loginMutation.error.response?.data?.message ?? 'Login failed. Please try again.')
+    ? (loginMutation.error.response?.data?.message ?? 'Login gagal, coba lagi!')
     : null
 
   return (
@@ -68,14 +68,14 @@ const LoginForm = () => {
           htmlFor="email"
           className="text-sm font-medium text-foreground"
         >
-          Email address
+          Email
         </label>
         <input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@company.com"
+          placeholder="nama@perusahaan.com"
           value={form.email}
           onChange={handleChange}
           disabled={loginMutation.isPending}
@@ -155,7 +155,7 @@ const LoginForm = () => {
         {loginMutation.isPending && (
           <Loader2 className="w-4 h-4 animate-spin" />
         )}
-        {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
+        {loginMutation.isPending ? 'Masuk...' : 'Masuk'}
       </button>
     </form>
   )

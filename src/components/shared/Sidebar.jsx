@@ -1,22 +1,3 @@
-// ============================================================
-// components/shared/Sidebar.jsx
-// Collapsible dashboard sidebar navigation.
-//
-// Design:
-//   - Dark sidebar (--sidebar-* CSS variables) in both themes.
-//   - Active route highlighted with brand lime green.
-//   - Collapsed state shows icons only with tooltip labels.
-//   - Mobile: renders as a drawer overlay.
-//   - Collapsible state managed by parent (DashboardLayout).
-//
-// Permission-aware navigation (Sprint 4):
-//   NAV_ITEMS are filtered against ROUTE_PERMISSIONS (routeAccess.js)
-//   using the current role — a nav link is only rendered if the role
-//   actually holds the VIEW permission for that route. This is the
-//   same map ProtectedRoute uses to guard the route itself, so the
-//   Sidebar can never show a link that would lead to Access Denied.
-// ============================================================
-
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuthStore, selectUserRole } from '@/store/authStore'
@@ -44,7 +25,7 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { path: '/dashboard',  label: 'Dasbor',              icon: LayoutDashboard },
+  { path: '/dashboard',  label: 'Dashboard',              icon: LayoutDashboard },
   { path: '/employees',  label: 'Karyawan',            icon: Users },
   { path: '/attendance', label: 'Absensi',             icon: ClipboardCheck },
   { path: '/sales',      label: 'Penjualan',           icon: TrendingUp },
@@ -92,16 +73,15 @@ const Sidebar = ({ collapsed, onToggle }) => {
         'flex items-center h-16 px-4 border-b border-sidebar-border shrink-0',
         collapsed ? 'justify-center' : 'gap-3'
       )}>
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-500 shrink-0">
-          <Coffee className="w-4 h-4 text-brand-950" />
-        </div>
+        <img 
+          src="/images/logo-mr-coffee.jpg" 
+          alt="Logo" 
+          className="w-8 h-8 object-cover rounded-md shrink-0 block" 
+        />
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate leading-none">
-              Braka Nusa
-            </p>
-            <p className="text-[10px] text-sidebar-foreground/60 truncate mt-0.5">
-              Core
+              Hello Mr. Coffee
             </p>
           </div>
         )}

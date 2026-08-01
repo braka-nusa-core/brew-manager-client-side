@@ -1,15 +1,3 @@
-// src/pages/DashboardPage.jsx
-// Dashboard — Recharts edition.
-// Install: npm install recharts
-//
-// Charts used:
-//   AreaChart + Area + XAxis + YAxis + Tooltip + ResponsiveContainer
-//     → Revenue vs Expense trend (main chart)
-//   AreaChart (single series, no axes)
-//     → Sparklines in hero metric cards
-//   PieChart + Pie + Cell
-//     → Attendance donut
-
 import { useState, useMemo }          from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -38,17 +26,17 @@ const getRange  = (days) => {
   return { startDate: toDateStr(start), endDate: toDateStr(end) }
 }
 const RANGES = [
-  { label: '7D',  days: 7  },
-  { label: '30D', days: 30 },
-  { label: '90D', days: 90 },
+  { label: '7 Hari',  days: 7  },
+  { label: '30 Hari', days: 30 },
+  { label: '90 Hari', days: 90 },
 ]
 
 const fmtShort = (n) => {
   if (n == null) return '—'
   const abs = Math.abs(n), sign = n < 0 ? '-' : ''
-  if (abs >= 1_000_000_000) return `${sign}Rp ${(abs/1e9).toFixed(1)}B`
-  if (abs >= 1_000_000)     return `${sign}Rp ${(abs/1e6).toFixed(1)}M`
-  if (abs >= 1_000)         return `${sign}Rp ${(abs/1e3).toFixed(0)}K`
+  if (abs >= 1_000_000_000) return `${sign}Rp ${(abs/1e9).toFixed(1)} Miliar`
+  if (abs >= 1_000_000)     return `${sign}Rp ${(abs/1e6).toFixed(1)} Juta`
+  if (abs >= 1_000)         return `${sign}Rp ${(abs/1e3).toFixed(0)} Ribu`
   return `${sign}Rp ${abs}`
 }
 
@@ -62,12 +50,10 @@ const greeting = () => {
 const getInitials = (n = '') =>
   n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-// ─── Skeleton ─────────────────────────────────────────────────
 
 const Sk = ({ className, style }) =>
   <div className={cn('animate-pulse rounded-xl bg-zinc-100', className)} style={style} />
 
-// ─── Custom Tooltip (shared by main chart) ────────────────────
 
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -87,7 +73,6 @@ const ChartTooltip = ({ active, payload, label }) => {
   )
 }
 
-// ─── Main Area Chart — Revenue vs Expense ─────────────────────
 
 const TrendChart = ({ salesData, expData, isLoading }) => {
   if (isLoading) return <Sk className="w-full rounded-2xl" style={{ height: 300 }} />
@@ -117,8 +102,8 @@ const TrendChart = ({ salesData, expData, isLoading }) => {
       <AreaChart data={merged} margin={{ top: 12, right: 8, left: -4, bottom: 0 }}>
         <defs>
           <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#84cc16" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="#84cc16" stopOpacity={0.03} />
+            <stop offset="0%"   stopColor="#34b1fd" stopOpacity={0.35} />
+            <stop offset="100%" stopColor="#34b1fd" stopOpacity={0.03} />
           </linearGradient>
           <linearGradient id="gradExpense" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%"   stopColor="#f43f5e" stopOpacity={0.28} />
@@ -155,9 +140,9 @@ const TrendChart = ({ salesData, expData, isLoading }) => {
 
         <Area
           type="monotone" dataKey="Revenue"
-          stroke="#84cc16" strokeWidth={2.8}
+          stroke="#34b1fd" strokeWidth={2.8}
           fill="url(#gradRevenue)" dot={false}
-          activeDot={{ r: 5.5, fill: '#fff', stroke: '#84cc16', strokeWidth: 2.5 }}
+          activeDot={{ r: 5.5, fill: '#fff', stroke: '#34b1fd', strokeWidth: 2.5 }}
           animationDuration={900} animationEasing="ease-out"
         />
         <Area
@@ -364,7 +349,7 @@ const PODIUM = [
     badge:      'bg-amber-100 text-amber-700',
     bar:        'linear-gradient(90deg,#f59e0b,#fbbf24)',
     crown:      '👑',
-    rank:       '1st',
+    rank:       '1',
   },
   {
     gradBg:     'bg-gradient-to-br from-slate-50   to-zinc-50',
@@ -374,7 +359,7 @@ const PODIUM = [
     badge:      'bg-slate-100 text-slate-600',
     bar:        'linear-gradient(90deg,#64748b,#94a3b8)',
     crown:      '🥈',
-    rank:       '2nd',
+    rank:       '2',
   },
   {
     gradBg:     'bg-gradient-to-br from-orange-50  to-amber-50',
@@ -384,7 +369,7 @@ const PODIUM = [
     badge:      'bg-orange-100 text-orange-700',
     bar:        'linear-gradient(90deg,#f97316,#fb923c)',
     crown:      '🥉',
-    rank:       '3rd',
+    rank:       '3',
   },
 ]
 
@@ -421,7 +406,7 @@ const PodiumCard = ({ emp, idx, maxRev }) => {
         <div className="min-w-0">
           <p className="text-sm font-bold text-zinc-900 truncate pr-6">{emp.employeeName}</p>
           <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-md', p.badge)}>
-            {p.rank} Place
+            Peringkat {p.rank}
           </span>
         </div>
       </div>
@@ -439,13 +424,13 @@ const PodiumCard = ({ emp, idx, maxRev }) => {
         <div className="flex items-center gap-1 bg-white/70 rounded-lg px-2 py-1">
           <Coffee size={11} className="text-zinc-400" />
           <span className="text-[11px] font-semibold text-zinc-700 tabular-nums">
-            {emp.totalCups} cups
+            {emp.totalCups} Cup
           </span>
         </div>
         <div className="flex items-center gap-1 bg-white/70 rounded-lg px-2 py-1">
           <Activity size={11} className="text-zinc-400" />
           <span className="text-[11px] font-semibold text-zinc-700 tabular-nums">
-            {emp.attendancePresent + (emp.attendanceLate ?? 0)}d
+            {emp.attendancePresent + (emp.attendanceLate ?? 0)} Hari
           </span>
         </div>
       </div>
@@ -611,7 +596,7 @@ const DashboardPage = () => {
         <div>
           <h1 className="text-xl font-bold text-zinc-900">
             {greeting()},{' '}
-            <span className="text-lime-600">{user?.name?.split(' ')[0] ?? 'Anda'}</span> 👋
+            <span className="text-[#34b1fd]">{user?.name?.split(' ')[0] ?? 'Anda'}</span> 👋
           </h1>
           <p className="text-sm text-zinc-400 mt-0.5">
             {new Date().toLocaleDateString('id-ID', {
@@ -662,7 +647,7 @@ const DashboardPage = () => {
                   <TrendingUp size={18} className="text-lime-600" />
                 </div>
               </div>
-              <Sparkline data={revSparkData} color="#84cc16" valueKey="totalRevenue" isLoading={lSale} />
+              <Sparkline data={revSparkData} color="#34b1fd" valueKey="totalRevenue" isLoading={lSale} />
             </>
           )}
         </div>
@@ -697,7 +682,7 @@ const DashboardPage = () => {
         <div className={cn(
           'rounded-2xl border shadow-sm p-5',
           profitable
-            ? 'bg-gradient-to-br from-lime-500 to-lime-400 border-lime-400'
+            ? 'bg-gradient-to-br from-[#2196f3] to-[#5accff] border-[#34b1fd]'
             : 'bg-gradient-to-br from-rose-500 to-rose-400 border-rose-400'
         )}>
           {lSum ? (

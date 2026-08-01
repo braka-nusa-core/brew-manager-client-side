@@ -37,14 +37,16 @@ const AuthLayout = () => {
 
       {/* Brand mark */}
       <div className="relative flex flex-col items-center mb-8">
-        <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-500 shadow-lg mb-3">
-          <Coffee className="w-6 h-6 text-brand-950" />
-        </div>
+        <img 
+          src="/images/logo-mr-coffee.jpg" 
+          alt="Hello Mr. Coffee Logo" 
+          className="w-12 h-12 object-cover rounded-2xl shadow-lg mb-3" 
+        />
         <h1 className="text-xl font-bold text-foreground tracking-tight">
-          Braka Nusa Core
+          Hello Mr. Coffee
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Coffee Shop Management
+          Management
         </p>
       </div>
 
@@ -54,7 +56,7 @@ const AuthLayout = () => {
       </div>
 
       <p className="relative text-xs text-muted-foreground mt-8">
-        © {new Date().getFullYear()} Braka Nusa Core. All rights reserved.
+        © {new Date().getFullYear()} Hello Mr. Coffee. All rights reserved.
       </p>
     </div>
   )

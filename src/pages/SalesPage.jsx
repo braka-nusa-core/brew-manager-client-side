@@ -1,11 +1,3 @@
-// src/pages/SalesPage.jsx
-// Sales management page — daily employee sales records.
-// Actual Sale model: { employeeId, outletId, date, totalCups, totalRevenue, notes }
-//
-// Filters: date range, per-employee search (future)
-// Removed: paymentMethod filter (not in backend model)
-// Page subtotal: sum of totalRevenue for current page
-
 import { useState }                from 'react'
 import { TrendingUp, Coffee }      from 'lucide-react'
 
@@ -21,12 +13,6 @@ import { useEffectiveOutletId }    from '@/store/activeOutletStore'
 import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
-
-// Phase 2: Sales is now a read-only ledger — Sale records are generated
-// automatically by CupRecord finalize (backend). Manual create/edit/delete
-// is intentionally removed from this page for every role. Access to VIEW
-// the page is unchanged and still follows the backend's VIEW_SALES /
-// MANAGE_SALES grant via router/routeAccess.js — only the write UI is gone.
 
 const today       = () => new Date().toISOString().split('T')[0]
 const thirtyDaysAgo = () => {
@@ -115,7 +101,7 @@ const SalesPage = () => {
                   <span>cup</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span>Total halaman:</span>
+                  <span>Total Penjualan:</span>
                   <span className="font-semibold text-foreground tabular-nums">
                     {formatCurrency(pageTotalRevenue)}
                   </span>

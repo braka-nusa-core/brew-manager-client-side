@@ -66,16 +66,7 @@ const InfoRow = ({ icon: Icon, label, value, children }) => (
   </div>
 )
 
-// ── Component ─────────────────────────────────────────────────
 
-/**
- * @param {{
- *   open: boolean,
- *   onClose: () => void,
- *   record: Object | null   — the full attendance record from the list
- *   canManage: boolean      — whether the current role may edit/delete
- * }} props
- */
 const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
   const toast          = useToast()
   const updateMutation = useUpdateAttendance()
@@ -125,11 +116,11 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
       { attendanceId: record._id, payload },
       {
         onSuccess: () => {
-          toast.success('Attendance updated')
+          toast.success('Jumlah kehadiran telah diperbarui.')
           onClose()
         },
         onError: (err) => {
-          toast.error('Update failed', err?.response?.data?.message ?? 'Please try again')
+          toast.error('Gagal diperbarui', err?.response?.data?.message ?? 'Silahkan coba lagi')
         },
       }
     )
@@ -139,11 +130,11 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
     if (!record) return
     deleteMutation.mutate(record._id, {
       onSuccess: () => {
-        toast.success('Record deleted', 'You can now re-submit the correct record.')
+        toast.success('Data berhasil dihapus', 'Kirim ulang untuk memperbaikinya.')
         onClose()
       },
       onError: (err) => {
-        toast.error('Delete failed', err?.response?.data?.message ?? 'Please try again')
+        toast.error('Data gagal dihapus', err?.response?.data?.message ?? 'Silahkan coba lagi')
       },
     })
   }
@@ -156,21 +147,21 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
     <Modal
       open={open}
       onClose={onClose}
-      title="Attendance Detail"
-      description="View or update this attendance record."
+      title="Detail Kehadiran"
+      description="Lihat atau perbarui catatan kehadiran ini."
       size="md"
     >
       <div className="space-y-5">
 
         {/* Read-only info section */}
         <div className="bg-muted/40 rounded-lg px-1 py-1">
-          <InfoRow icon={User} label="Employee">
+          <InfoRow icon={User} label="Karyawan">
             <p className="text-sm font-medium text-foreground mt-0.5">
               {record.employeeId?.name ?? record.employeeId ?? '—'}
             </p>
           </InfoRow>
 
-          <InfoRow icon={Calendar} label="Date">
+          <InfoRow icon={Calendar} label="Tanggal">
             <p className="text-sm font-medium text-foreground mt-0.5">
               {formatDate(record.date)}
             </p>
@@ -182,16 +173,14 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
             </p>
           </InfoRow>
 
-          <InfoRow icon={FileText} label="Recorded At">
+          <InfoRow icon={FileText} label="Dibuat Pada">
             <p className="text-sm font-medium text-foreground mt-0.5">
               {formatDateTime(record.createdAt)}
             </p>
           </InfoRow>
         </div>
 
-        {/* Editable form — only for roles with MANAGE_ATTENDANCE.
-            Read-only roles (e.g. viewer) see status/notes as plain text
-            below, with no Save/Delete controls at all. */}
+       
         {canManage ? (
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="space-y-4">
@@ -217,10 +206,10 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
               </FormField>
 
               {/* Notes */}
-              <FormField label="Notes" error={errors.notes?.message}>
+              <FormField label="Catatan" error={errors.notes?.message}>
                 <textarea
                   {...register('notes')}
-                  placeholder="Optional notes (e.g. reason for absence, late arrival time…)"
+                  placeholder="Catatan opsional (misalnya alasan tidak masuk, waktu terlambat…)"
                   disabled={isPending}
                   rows={3}
                   className={cn(
@@ -248,25 +237,25 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Delete record
+                    Hapus
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-destructive font-medium">Confirm delete?</p>
+                    <p className="text-xs text-destructive font-medium">Konfirmasi hapus?</p>
                     <button
                       type="button"
                       onClick={handleDelete}
                       disabled={isPending}
                       className="text-xs font-semibold text-destructive hover:underline disabled:opacity-50"
                     >
-                      {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete'}
+                      {deleteMutation.isPending ? 'Menghapus…' : 'Ya, hapus'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(false)}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      Cancel
+                      Batal
                     </button>
                   </div>
                 )}
@@ -280,7 +269,7 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
                   disabled={isPending}
                   className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
                 >
-                  Cancel
+                  Batal
                 </button>
 
                 <button
@@ -295,7 +284,7 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
                   {updateMutation.isPending && (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   )}
-                  {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+                  {updateMutation.isPending ? 'Menyimpan…' : 'Simpan Perubahan'}
                 </button>
               </div>
 
@@ -308,9 +297,9 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
               <AttendanceStatusBadge status={record.status} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1.5">Notes</p>
+              <p className="text-xs text-muted-foreground mb-1.5">Catatan</p>
               <p className="text-sm text-foreground">
-                {record.notes || <span className="text-muted-foreground">No notes.</span>}
+                {record.notes || <span className="text-muted-foreground">Tidak ada catatan.</span>}
               </p>
             </div>
             <div className="flex justify-end pt-4 border-t border-border">
@@ -319,7 +308,7 @@ const AttendanceDetailModal = ({ open, onClose, record, canManage }) => {
                 onClick={onClose}
                 className="px-3 py-1.5 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors"
               >
-                Close
+                Tutup
               </button>
             </div>
           </div>

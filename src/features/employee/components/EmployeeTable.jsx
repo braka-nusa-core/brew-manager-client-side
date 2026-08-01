@@ -1,4 +1,3 @@
-// src/features/employee/components/EmployeeTable.jsx
 import { useState }                  from 'react'
 import { MoreHorizontal, Pencil, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react'
 import DataTable                     from '@/components/shared/DataTable'
@@ -10,10 +9,6 @@ import { useToggleEmployeeActive }   from '../hooks/useEmployees'
 import useToast                      from '@/hooks/useToast'
 import { cn }                        from '@/lib/utils'
 
-// Employee type badge config — labels mirror EMPLOYEE_TYPES (imported from
-// EmployeeFormModal, the single source of truth shared with the form).
-// Rider gets a distinct color since it's operationally significant
-// (riders are the only employees eligible for Cup Record assignment).
 const EMPLOYEE_TYPE_BADGE = {
   barista:    { label: 'Barista',    className: 'bg-blue-50 text-blue-600' },
   cashier:    { label: 'Cashier',    className: 'bg-violet-50 text-violet-600' },
@@ -61,9 +56,9 @@ const RowActions = ({ employee, onEdit, onDelete }) => {
     setOpen(false)
     toggleMutation.mutate(employee._id, {
       onSuccess: (updated) => {
-        toast.success(updated.isActive ? 'Employee activated' : 'Employee deactivated', updated.name)
+        toast.success(updated.isActive ? 'Karyawan diaktifkan' : 'Karyawan dinonaktifkan', updated.name)
       },
-      onError: (err) => toast.error('Failed to update status', err.response?.data?.message),
+      onError: (err) => toast.error('Gagal mengupdate status', err.response?.data?.message),
     })
   }
 
@@ -85,7 +80,7 @@ const RowActions = ({ employee, onEdit, onDelete }) => {
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-muted transition-colors"
             >
               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-              Edit Details
+              Edit Detail
             </button>
 
             <button
@@ -96,7 +91,7 @@ const RowActions = ({ employee, onEdit, onDelete }) => {
               {employee.isActive
                 ? <ToggleLeft  className="w-3.5 h-3.5 text-muted-foreground" />
                 : <ToggleRight className="w-3.5 h-3.5 text-brand-500" />}
-              {employee.isActive ? 'Deactivate' : 'Activate'}
+              {employee.isActive ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
 
             <div className="border-t border-border" />
@@ -106,7 +101,7 @@ const RowActions = ({ employee, onEdit, onDelete }) => {
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Remove
+              Hapus
             </button>
           </div>
         </>
@@ -124,12 +119,12 @@ const EmployeeTable = ({ employees, canManage }) => {
       <DataTable>
         <DataTable.Head>
           <DataTable.HeadRow>
-            <DataTable.HeadCell>Employee</DataTable.HeadCell>
-            <DataTable.HeadCell>Position</DataTable.HeadCell>
-            <DataTable.HeadCell>Type</DataTable.HeadCell>
-            <DataTable.HeadCell>Salary Type</DataTable.HeadCell>
-            <DataTable.HeadCell>Base Salary</DataTable.HeadCell>
-            <DataTable.HeadCell>Join Date</DataTable.HeadCell>
+            <DataTable.HeadCell>Karyawan</DataTable.HeadCell>
+            <DataTable.HeadCell>Posisi</DataTable.HeadCell>
+            <DataTable.HeadCell>Tipe</DataTable.HeadCell>
+            <DataTable.HeadCell>Tipe Gaji</DataTable.HeadCell>
+            <DataTable.HeadCell>Gaji Pokok</DataTable.HeadCell>
+            <DataTable.HeadCell>Tanggal Bergabung</DataTable.HeadCell>
             <DataTable.HeadCell>Status</DataTable.HeadCell>
             <DataTable.HeadCell>KTP</DataTable.HeadCell>
             {canManage && <DataTable.HeadCell className="w-12" />}
@@ -144,7 +139,7 @@ const EmployeeTable = ({ employees, canManage }) => {
                   <EmployeeAvatar name={emp.name} />
                   <div className="min-w-0">
                     <p className="font-medium text-foreground leading-none truncate">{emp.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.phone ?? 'No phone'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{emp.phone ?? 'Tidak ada nomor HP'}</p>
                   </div>
                 </div>
               </DataTable.Cell>
@@ -174,7 +169,7 @@ const EmployeeTable = ({ employees, canManage }) => {
                     ? 'bg-blue-50 text-blue-600'
                     : 'bg-amber-50 text-amber-600'
                 )}>
-                  {emp.salaryType === 'monthly' ? 'Monthly' : 'Daily'}
+                  {emp.salaryType === 'monthly' ? 'Bulanan' : 'Harian'}
                 </span>
               </DataTable.Cell>
 

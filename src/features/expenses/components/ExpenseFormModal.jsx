@@ -1,30 +1,3 @@
-// src/features/expenses/components/ExpenseFormModal.jsx
-// Handles both CREATE and EDIT in one modal.
-//
-// Backend contract (from expense.validation.js + expense.service.js):
-//   CREATE POST /expenses:
-//     outletId    (required) ObjectId — now derived from the Working
-//                 Outlet (useEffectiveOutletId()), never a form field
-//     date        (required) YYYY-MM-DD — normalized to midnight UTC
-//     category    (required) enum EXPENSE_CATEGORIES
-//     description (required) string 2–255 chars
-//     amount      (required) number >= 0
-//
-//   UPDATE PATCH /expenses/:id:
-//     date, category, description, amount — all optional, at least one required
-//     outletId + tenantId are IMMUTABLE — never send on update
-//
-// Working Outlet architecture:
-//   There is no outlet selector in this form at all. outletId always
-//   comes from useEffectiveOutletId() — the same single source of
-//   truth the Navbar's Outlet Switcher writes to. If no specific
-//   Working Outlet is selected ("All Outlets"), recording an expense
-//   is blocked entirely (nothing to assign it to).
-//
-// UX:
-//   amount     → <RupiahInput> (formatted display, raw integer to RHF)
-//   category   → <Select> with EXPENSE_CATEGORIES options
-
 import { useEffect }                                from 'react'
 import { useForm }                                  from 'react-hook-form'
 import { zodResolver }                              from '@hookform/resolvers/zod'
@@ -40,24 +13,21 @@ import { useEffectiveOutletId }                     from '@/store/activeOutletSt
 import useToast                                     from '@/hooks/useToast'
 import { cn }                                       from '@/lib/utils'
 
-// ── Zod schemas ───────────────────────────────────────────────
-//
-// outletId is intentionally NOT a field here — see file header.
 
 const createSchema = z.object({
-  date:     z.string().min(1, 'Date is required'),
+  date:     z.string().min(1, 'Tanggal wajib diisi'),
   category: z.enum(EXPENSE_CATEGORIES, {
-    required_error:  'Select a category',
-    invalid_type_error: 'Select a valid category',
+    required_error:  'Pilih kategori',
+    invalid_type_error: 'Pilih kategori yang valid',
   }),
   description: z
     .string()
-    .min(2, 'Description must be at least 2 characters')
-    .max(255, 'Description too long'),
+    .min(2, 'Deskripsi harus minimal 2 karakter')
+    .max(255, 'Deskripsi terlalu panjang'),
   // RupiahInput stores integer | '' — require actual number on create
   amount: z
-    .number({ required_error: 'Amount is required', invalid_type_error: 'Enter a valid amount' })
-    .min(0, 'Cannot be negative'),
+    .number({ required_error: 'Jumlah wajib diisi', invalid_type_error: 'Masukkan jumlah yang valid' })
+    .min(0, 'Tidak boleh negatif'),
 })
 
 // On edit: outletId + tenantId immutable (never sent), at least one field required
@@ -65,15 +35,14 @@ const editSchema = z
   .object({
     date:        z.string().optional().or(z.literal('')),
     category:    z.enum(EXPENSE_CATEGORIES).optional(),
-    description: z.string().min(2, 'At least 2 characters').max(255).optional().or(z.literal('')),
-    amount:      z.union([z.number().min(0, 'Cannot be negative'), z.literal('')]).optional(),
+    description: z.string().min(2, 'Deskripsi harus minimal 2 karakter').max(255).optional().or(z.literal('')),
+    amount:      z.union([z.number().min(0, 'Tidak boleh negatif'), z.literal('')]).optional(),
   })
   .refine(
     (d) => [d.date, d.category, d.description, d.amount].some((v) => v !== undefined && v !== ''),
-    { message: 'Provide at least one field to update' }
+    { message: 'Masukkan setidaknya satu field untuk update' }
   )
 
-// ── Helpers ───────────────────────────────────────────────────
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -87,7 +56,6 @@ const cleanPayload = (data) =>
     Object.entries(data).filter(([, v]) => v !== '' && v !== undefined && v !== null)
   )
 
-// ── Default values ────────────────────────────────────────────
 
 const getCreateDefaults = () => ({
   date:        today(),
@@ -103,22 +71,11 @@ const getEditDefaults = (expense) => ({
   amount:      expense?.amount      ?? '',
 })
 
-// ── Component ─────────────────────────────────────────────────
 
-/**
- * @param {{
- *   open: boolean,
- *   onClose: () => void,
- *   expense?: Object | null
- * }} props
- */
 const ExpenseFormModal = ({ open, onClose, expense = null }) => {
   const isEdit = Boolean(expense)
   const toast  = useToast()
 
-  // The single source of truth for outlet — no local outlet state, no
-  // form field, no AsyncSearchSelect. Same store the Navbar's Outlet
-  // Switcher writes to. null = "All Outlets".
   const effectiveOutletId = useEffectiveOutletId()
   const hasWorkingOutlet  = !!effectiveOutletId
 
@@ -147,26 +104,21 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
   }, [open, isEdit, expense, reset])
 
   const onSubmit = (data) => {
-    // No Working Outlet selected ("All Outlets") — only relevant to
-    // CREATE, since outletId is immutable on update (never sent, per
-    // backend contract) and edit doesn't depend on it at all.
     if (!isEdit && !hasWorkingOutlet) return
 
     const payload = cleanPayload(data)
     if (isEdit) {
-      // outletId is immutable on update — never sent, matches backend contract.
       updateMutation.mutate(
         { expenseId: expense._id, payload },
         {
-          onSuccess: () => { toast.success('Expense updated successfully'); onClose() },
-          onError:   (err) => toast.error('Update failed', err?.response?.data?.message ?? 'Please try again'),
+          onSuccess: () => { toast.success('Pengeluaran berhasil diupdate'); onClose() },
+          onError:   (err) => toast.error('Pembaruan Gagal', err?.response?.data?.message ?? 'Silahkan Coba Lagi'),
         }
       )
     } else {
-      // outletId always comes from the Working Outlet, never a form field.
       createMutation.mutate({ ...payload, outletId: effectiveOutletId }, {
-        onSuccess: () => { toast.success('Expense recorded successfully'); onClose() },
-        onError:   (err) => toast.error('Failed to record expense', err?.response?.data?.message ?? 'Check your inputs'),
+        onSuccess: () => { toast.success('Pengeluaran berhasil dicatat'); onClose() },
+        onError:   (err) => toast.error('Gagal Mencatat Pengeluaran', err?.response?.data?.message ?? 'Silahkan Coba Lagi'),
       })
     }
   }
@@ -175,28 +127,25 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Expense' : 'Record Expense'}
+      title={isEdit ? 'Edit Pengeluaran' : 'Catat Pengeluaran'}
       description={
         isEdit
-          ? 'Update this expense record. Leave fields blank to keep current values.'
-          : 'Fill in all required fields to record a new expense.'
+          ? 'Perbarui catatan pengeluaran ini. Biarkan kolom kosong untuk mempertahankan nilai saat ini.'
+          : 'Isi semua kolom yang diperlukan untuk mencatat pengeluaran baru.'
       }
       size="md"
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="space-y-4">
 
-          {/* No Working Outlet selected ("All Outlets") — only relevant
-              to create; outletId is immutable on update. */}
           {!isEdit && !hasWorkingOutlet && (
             <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-sm text-amber-800 dark:text-amber-400">
               <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>Select a specific outlet from the switcher above to record an expense.</span>
+              <span>Pilih outlet tertentu dari switcher di atas untuk mencatat pengeluaran.</span>
             </div>
           )}
 
-          {/* Date */}
-          <FormField label="Expense Date" error={errors.date?.message} required={!isEdit}>
+          <FormField label="Tanggal Pengeluaran" error={errors.date?.message} required={!isEdit}>
             <Input
               {...register('date')}
               type="date"
@@ -205,14 +154,13 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
             />
           </FormField>
 
-          {/* Category */}
-          <FormField label="Category" error={errors.category?.message} required={!isEdit}>
+          <FormField label="Kategori" error={errors.category?.message} required={!isEdit}>
             <Select
               {...register('category')}
               error={!!errors.category?.message}
               disabled={isPending}
             >
-              <option value="">Select a category…</option>
+              <option value="">Pilih Kategori…</option>
               {EXPENSE_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -221,18 +169,16 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
             </Select>
           </FormField>
 
-          {/* Description */}
-          <FormField label="Description" error={errors.description?.message} required={!isEdit}>
+          <FormField label="Deskripsi" error={errors.description?.message} required={!isEdit}>
             <Input
               {...register('description')}
-              placeholder="e.g. Coffee beans restocking — 5kg"
+              placeholder="Contoh: Pembelian biji kopi — 5kg"
               error={!!errors.description?.message}
               disabled={isPending}
             />
           </FormField>
 
-          {/* Amount */}
-          <FormField label="Amount (IDR)" error={errors.amount?.message} required={!isEdit}>
+          <FormField label="Jumlah (IDR)" error={errors.amount?.message} required={!isEdit}>
             <RupiahInput
               control={control}
               name="amount"
@@ -265,8 +211,8 @@ const ExpenseFormModal = ({ open, onClose, expense = null }) => {
           >
             {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {isPending
-              ? (isEdit ? 'Saving…' : 'Recording…')
-              : (isEdit ? 'Save Changes' : 'Record Expense')}
+              ? (isEdit ? 'Menyimpan…' : 'Mencatat…')
+              : (isEdit ? 'Simpan Perubahan' : 'Catat Pengeluaran')}
           </button>
         </div>
       </form>

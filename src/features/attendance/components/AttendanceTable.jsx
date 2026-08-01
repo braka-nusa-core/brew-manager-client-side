@@ -1,11 +1,3 @@
-// src/features/attendance/components/AttendanceTable.jsx
-// Attendance data table.
-// Row click → opens AttendanceDetailModal for view/edit.
-//
-// Fix: employeeId and outletId are raw ObjectId strings from the backend
-// (not populated objects). Names are resolved via useEntityMap() which
-// fetches all employees + outlets once and builds id → object lookup maps.
-
 import { useState, useRef }                from 'react'
 import { createPortal }                    from 'react-dom'
 import { MoreHorizontal, Pencil, Trash2 }  from 'lucide-react'
@@ -18,7 +10,6 @@ import useEntityMap                        from '@/hooks/useEntityMap'
 import useToast                            from '@/hooks/useToast'
 import { cn }                              from '@/lib/utils'
 
-// ── Helpers ───────────────────────────────────────────────────
 
 const formatDate = (dateStr) =>
   dateStr
@@ -73,14 +64,11 @@ const RowActions = ({ record, onEdit }) => {
     setOpen(false)
     setConfirmDel(false)
     deleteMutation.mutate(record._id, {
-      onSuccess: () => toast.success('Record deleted', 'Re-submit to correct it.'),
-      onError:   (err) => toast.error('Delete failed', err?.response?.data?.message),
+      onSuccess: () => toast.success('Data berhasil dihapus', 'Kirim ulang untuk memperbaikinya.'),
+      onError:   (err) => toast.error('Data gagal dihapus', err?.response?.data?.message),
     })
   }
 
-  // Dropdown is portaled to <body> and positioned via fixed coordinates
-  // computed from the trigger's bounding rect, so it is never clipped by
-  // a table/card ancestor's overflow-hidden/auto.
   const handleOpen = (e) => {
     e.stopPropagation()
     if (!open && triggerRef.current) {
@@ -115,7 +103,7 @@ const RowActions = ({ record, onEdit }) => {
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-muted transition-colors"
             >
               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-              Edit Record
+              Edit
             </button>
 
             <div className="border-t border-border" />
@@ -131,7 +119,7 @@ const RowActions = ({ record, onEdit }) => {
               )}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              {confirmDel ? 'Confirm delete?' : 'Delete'}
+              {confirmDel ? 'Konfirmasi hapus?' : 'Hapus'}
             </button>
           </div>
         </>,
@@ -157,12 +145,12 @@ const AttendanceTable = ({ records, canManage }) => {
       <DataTable>
         <DataTable.Head>
           <DataTable.HeadRow>
-            <DataTable.HeadCell>Employee</DataTable.HeadCell>
-            <DataTable.HeadCell>Date</DataTable.HeadCell>
+            <DataTable.HeadCell>Karyawan</DataTable.HeadCell>
+            <DataTable.HeadCell>Tanggal</DataTable.HeadCell>
             <DataTable.HeadCell>Status</DataTable.HeadCell>
             <DataTable.HeadCell className="hidden md:table-cell">Outlet</DataTable.HeadCell>
-            <DataTable.HeadCell className="hidden lg:table-cell">Notes</DataTable.HeadCell>
-            <DataTable.HeadCell className="hidden xl:table-cell">Recorded</DataTable.HeadCell>
+            <DataTable.HeadCell className="hidden lg:table-cell">Catatan</DataTable.HeadCell>
+            <DataTable.HeadCell className="hidden xl:table-cell">Dibuat</DataTable.HeadCell>
             {canManage && <DataTable.HeadCell className="w-10" />}
           </DataTable.HeadRow>
         </DataTable.Head>

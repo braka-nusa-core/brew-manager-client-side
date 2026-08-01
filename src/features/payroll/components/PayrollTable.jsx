@@ -1,13 +1,3 @@
-// src/features/payroll/components/PayrollTable.jsx
-// Payroll table with resolved employee/outlet names via useEntityMap()
-// because backend returns raw ObjectId strings.
-//
-// Features:
-// - Row click → PayrollDetailModal
-// - Quick approve for draft payrolls
-// - Responsive columns
-// - Employee avatar + resolved names
-
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { MoreHorizontal, CheckCircle2, Eye } from 'lucide-react'
@@ -37,14 +27,14 @@ const MONTHS = [
   'Feb',
   'Mar',
   'Apr',
-  'May',
+  'Mei',
   'Jun',
   'Jul',
-  'Aug',
+  'Agu',
   'Sep',
-  'Oct',
+  'Okt',
   'Nov',
-  'Dec',
+  'Des',
 ]
 
 const formatPeriod = (period) =>
@@ -106,12 +96,12 @@ const RowActions = ({ payroll, onView }) => {
 
     approveMutation.mutate(payroll._id, {
       onSuccess: () => {
-        toast.success('Payroll approved')
+        toast.success('Payroll disetujui')
       },
 
       onError: (err) => {
         toast.error(
-          'Approval failed',
+          'Approval gagal',
           err?.response?.data?.message
         )
       },
@@ -173,7 +163,7 @@ const RowActions = ({ payroll, onView }) => {
                   className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Quick Approve
+                  Setujui Cepat
                 </button>
               </>
             )}
@@ -201,22 +191,22 @@ const PayrollTable = ({ payrolls, canManage }) => {
       <DataTable>
         <DataTable.Head>
           <DataTable.HeadRow>
-            <DataTable.HeadCell>Employee</DataTable.HeadCell>
-            <DataTable.HeadCell>Period</DataTable.HeadCell>
+            <DataTable.HeadCell>Karyawan</DataTable.HeadCell>
+            <DataTable.HeadCell>Periode</DataTable.HeadCell>
 
             <DataTable.HeadCell className="hidden md:table-cell">
-              Attendance
+              Absensi
             </DataTable.HeadCell>
 
             <DataTable.HeadCell className="hidden lg:table-cell">
-              Base Salary
+              Gaji Pokok
             </DataTable.HeadCell>
 
             <DataTable.HeadCell className="hidden xl:table-cell">
               Bonus + Cups
             </DataTable.HeadCell>
 
-            <DataTable.HeadCell>Total Pay</DataTable.HeadCell>
+            <DataTable.HeadCell>Total Gaji</DataTable.HeadCell>
 
             <DataTable.HeadCell className="hidden xl:table-cell">
               Outlet
@@ -311,10 +301,6 @@ const PayrollTable = ({ payrolls, canManage }) => {
                   </span>
                 </DataTable.Cell>
 
-                {/* Bonus — Sprint 8.2.6a: cupsBonus is legacy (always 0
-                    under the v2.0 engine); total bonus is now the sum of
-                    dailyTierBonus + weeklyAttendanceBonus + manualBonus.
-                    Display only, no calculation logic changed. */}
                 <DataTable.Cell className="hidden xl:table-cell">
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     <p>

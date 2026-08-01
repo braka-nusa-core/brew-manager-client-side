@@ -1,13 +1,3 @@
-// src/pages/ExpensesPage.jsx
-// Expense management page.
-// Wired to: useExpenses (TanStack Query) → expensesApi → GET /api/v1/expenses
-// CRUD: Record (ExpenseFormModal), Edit via row click, Delete via RowActions.
-//
-// Filters: category tabs, date range
-// Mirrors SalesPage / EmployeesPage composition exactly:
-//   PageHeader → Toolbar (category tabs + date range + refresh indicator)
-//   → Card { Skeleton | Error | Empty | Table + Pagination }
-
 import { useState }                   from 'react'
 import { Receipt, PlusCircle }        from 'lucide-react'
 
@@ -27,8 +17,7 @@ import { cn }                         from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
-// Roles that can manage (create/edit/delete) expenses — mirrors backend's
-// MANAGE_EXPENSES grant (super_admin, tenant_admin, manager).
+
 const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
 
 const today        = () => new Date().toISOString().split('T')[0]
@@ -173,7 +162,7 @@ const ExpensesPage = () => {
 
             {!isLoading && !isError && expenses.length > 0 && (
               <div className="sm:ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span>Total halaman:</span>
+                <span>Total Pengeluaran:</span>
                 <span className="font-semibold text-foreground tabular-nums">
                   {formatCurrency(pageTotal)}
                 </span>

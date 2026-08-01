@@ -9,13 +9,7 @@ import { useDeleteEmployee }      from '../hooks/useEmployees'
 import useToast                   from '@/hooks/useToast'
 import { cn }                     from '@/lib/utils'
 
-/**
- * @param {{
- *   open: boolean,
- *   onClose: () => void,
- *   employee: Object | null
- * }} props
- */
+
 const DeleteConfirmDialog = ({ open, onClose, employee }) => {
   const toast          = useToast()
   const deleteMutation = useDeleteEmployee()
@@ -25,13 +19,13 @@ const DeleteConfirmDialog = ({ open, onClose, employee }) => {
 
     deleteMutation.mutate(employee._id, {
       onSuccess: () => {
-        toast.success(`${employee.name} has been removed`)
+        toast.success(`${employee.name} berhasil dihapus`)
         onClose()
       },
       onError: (err) => {
         toast.error(
-          'Failed to remove employee',
-          err.response?.data?.message ?? 'Please try again'
+          'Gagal menghapus karyawan',
+          err.response?.data?.message ?? 'Silahkan coba lagi'
         )
       },
     })
@@ -41,7 +35,7 @@ const DeleteConfirmDialog = ({ open, onClose, employee }) => {
     <Modal
       open={open}
       onClose={onClose}
-      title="Remove Employee"
+      title="Hapus Karyawan"
       size="sm"
     >
       <div className="space-y-4">
@@ -52,13 +46,11 @@ const DeleteConfirmDialog = ({ open, onClose, employee }) => {
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">
-              Remove{' '}
-              <span className="font-semibold">{employee?.name ?? 'this employee'}</span>?
+              Hapus{' '}
+              <span className="font-semibold">{employee?.name ?? 'karyawan ini'}</span>?
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              This will deactivate the employee record. Their payroll and
-              attendance history will be preserved. This action can be
-              reversed by an admin.
+              Tindakan ini akan menonaktifkan data karyawan. Riwayat penggajian dan kehadiran mereka akan dipertahankan. Tindakan ini dapat dibatalkan oleh admin.
             </p>
           </div>
         </div>
@@ -70,7 +62,7 @@ const DeleteConfirmDialog = ({ open, onClose, employee }) => {
             disabled={deleteMutation.isPending}
             className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
           >
-            Cancel
+            Batal
           </button>
 
           <button
@@ -85,7 +77,7 @@ const DeleteConfirmDialog = ({ open, onClose, employee }) => {
             {deleteMutation.isPending && (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             )}
-            {deleteMutation.isPending ? 'Removing…' : 'Remove Employee'}
+            {deleteMutation.isPending ? 'Menghapus…' : 'Hapus Karyawan'}
           </button>
         </div>
       </div>

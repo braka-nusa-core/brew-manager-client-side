@@ -9,10 +9,10 @@ const LoginPage = () => (
   <div className="bg-card border border-border rounded-xl shadow-sm p-8">
     <div className="mb-6">
       <h2 className="text-xl font-semibold text-foreground">
-        Welcome back
+        Selamat Datang Kembali!
       </h2>
       <p className="text-sm text-muted-foreground mt-1">
-        Sign in to your workspace
+        Masuk ke workspace Anda
       </p>
     </div>
 

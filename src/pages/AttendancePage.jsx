@@ -1,12 +1,3 @@
-// src/pages/AttendancePage.jsx
-// Attendance management page.
-// Wired to: useAttendances → GET /api/v1/attendance
-// CRUD: detail/edit via row click → AttendanceDetailModal
-//       bulk input → BulkAttendanceModal
-//
-// Filters: status, date range, search (by employeeId for now)
-// Pagination: shared Pagination component
-
 import { useState }                from 'react'
 import { ClipboardCheck, ListPlus } from 'lucide-react'
 
@@ -28,11 +19,8 @@ import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
-// Roles that can manage (bulk-input/edit/delete) attendance — mirrors
-// backend's MANAGE_ATTENDANCE grant (super_admin, tenant_admin, manager).
 const MANAGE_ROLES = ['super_admin', 'tenant_admin', 'manager']
 
-// Today in YYYY-MM-DD format for default endDate
 const today = () => new Date().toISOString().split('T')[0]
 
 // 30 days ago for default startDate
@@ -75,7 +63,6 @@ const AttendancePage = () => {
   const handleStatus      = (val) => { setStatusFilter(val); resetPage() }
   const handleStartDate   = (val) => { setStartDate(val);   resetPage() }
   const handleEndDate     = (val) => { setEndDate(val);     resetPage() }
-
   // ── Data ───────────────────────────────────────────────────
   const {
     data,
@@ -91,10 +78,6 @@ const AttendancePage = () => {
     startDate:  startDate       || undefined,
     endDate:    endDate         || undefined,
     outletId:   effectiveOutletId || undefined,
-    // search maps to employeeId in MVP — future: backend text search
-    // For now we show search as UI but don't pass to backend since
-    // backend doesn't support name-based search on attendance.
-    // This will be wired when backend adds $lookup-based search.
   })
 
   const records    = data?.data       ?? []
@@ -201,8 +184,8 @@ const AttendancePage = () => {
             <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
               {[
                 { label: 'Hari Ini', days: 0  },
-                { label: '7h',       days: 7  },
-                { label: '30h',      days: 30 },
+                { label: '7 Hari',       days: 7  },
+                { label: '30 Hari',      days: 30 },
               ].map(({ label, days }) => (
                 <button
                   key={label}

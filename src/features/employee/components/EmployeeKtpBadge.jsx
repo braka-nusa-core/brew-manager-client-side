@@ -10,12 +10,12 @@ import { cn }                  from '@/lib/utils'
 
 const STATUS_CONFIG = {
   pending: {
-    label: 'Pending',
+    label: 'Tertunda',
     icon:  Clock,
     badge: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
   },
   received: {
-    label: 'Received',
+    label: 'Diterima',
     icon:  CheckCircle2,
     badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400',
   },

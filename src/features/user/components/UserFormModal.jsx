@@ -32,16 +32,16 @@ const OBJECT_ID_RE = /^[a-f\d]{24}$/i
 const EMAIL_RE     = /^\S+@\S+\.\S+$/
 
 const createSchema = z.object({
-  name:     z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email:    z.string().regex(EMAIL_RE, 'Enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  role:     z.enum(CREATABLE_ROLES, { errorMap: () => ({ message: 'Select a role' }) }),
-  outletId: z.string().regex(OBJECT_ID_RE, 'Select an outlet'),
+  name:     z.string().min(2, 'Nama harus terdiri minimal 2 karakter.').max(100),
+  email:    z.string().regex(EMAIL_RE, 'Masukkan alamat email yang valid'),
+  password: z.string().min(8, 'Kata sandi harus terdiri minimal 8 karakter.'),
+  role:     z.enum(CREATABLE_ROLES, { errorMap: () => ({ message: 'Pilih role' }) }),
+  outletId: z.string().regex(OBJECT_ID_RE, 'Pilih outlet'),
 })
 
 const editSchema = z.object({
-  name:     z.string().min(2).max(100).optional().or(z.literal('')),
-  email:    z.string().regex(EMAIL_RE, 'Enter a valid email').optional().or(z.literal('')),
+  name:     z.string().min(2, 'Nama harus terdiri minimal 2 karakter.').max(100).optional().or(z.literal('')),
+  email:    z.string().regex(EMAIL_RE, 'Masukkan alamat email yang valid').optional().or(z.literal('')),
   outletId: z.string().regex(OBJECT_ID_RE).optional().or(z.literal('')),
 })
 
@@ -55,7 +55,7 @@ const getEditDefaults   = (u)  => ({
   outletId: u?.outletId?.toString?.() ?? u?.outletId ?? '',
 })
 
-const ROLE_LABELS = { manager: 'Manager', cashier: 'Cashier', viewer: 'Viewer' }
+const ROLE_LABELS = { manager: 'Manajer', cashier: 'Kasir', viewer: 'Pengawas' }
 
 const UserFormModal = ({ open, onClose, user = null }) => {
   const isEdit = Boolean(user)
@@ -100,26 +100,26 @@ const UserFormModal = ({ open, onClose, user = null }) => {
       else if (outletId === '') payload.outletId = null
 
       updateMutation.mutate({ userId: user._id, payload }, {
-        onSuccess: () => { toast.success('User updated'); onClose() },
+        onSuccess: () => { toast.success('Pengguna diperbarui'); onClose() },
         onError:   (err) => {
-          const msg = err?.response?.data?.message ?? 'Please try again'
-          toast.error(err?.response?.status === 409 ? 'Email already in use' : 'Update failed', msg)
+          const msg = err?.response?.data?.message ?? 'Coba lagi!'
+          toast.error(err?.response?.status === 409 ? 'Email sudah digunakan' : 'Update gagal!', msg)
         },
       })
     } else {
       createMutation.mutate(data, {
-        onSuccess: () => { toast.success('User created', `${data.name} can now log in.`); onClose() },
+        onSuccess: () => { toast.success('Pengguna Dibuat', `${data.name} Sekarang bisa masuk.`); onClose() },
         onError:   (err) => {
           const status = err?.response?.status
-          const msg    = err?.response?.data?.message ?? 'Please try again'
+          const msg    = err?.response?.data?.message ?? 'Coba lagi!'
           // Backend returns 403 for both role-escalation and plan-limit
           // rejections (checkPlanLimit never returns 429) — distinguish
           // using the message text, which is the only differentiator.
           const isPlanLimit = status === 403 && /plan limit reached/i.test(msg)
-          const title  = status === 409 ? 'Email already in use'
-                       : isPlanLimit     ? 'Plan limit reached'
-                       : status === 403  ? 'Permission denied'
-                       : 'Failed to create user'
+          const title  = status === 409 ? 'Email sudah digunakan'
+                       : isPlanLimit     ? 'Batas rencana telah tercapai'
+                       : status === 403  ? 'Izin ditolak'
+                       : 'Gagal membuat pengguna'
           toast.error(title, msg)
         },
       })
@@ -133,8 +133,8 @@ const UserFormModal = ({ open, onClose, user = null }) => {
       title={isEdit ? 'Edit User' : 'Create User'}
       description={
         isEdit
-          ? 'Update name, email, or outlet assignment. Role cannot be changed after creation.'
-          : 'Create a login account. All roles (manager, cashier, viewer) require an outlet.'
+          ? 'Perbarui nama, email, atau penugasan outlet. Role tidak dapat diubah setelah pembuatan.'
+          : 'Buat akun login. Semua role (manajer, kasir, pengawas) memerlukan outlet.'
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -151,7 +151,7 @@ const UserFormModal = ({ open, onClose, user = null }) => {
           {/* Password — create only */}
           {!isEdit && (
             <FormField label="Password" error={errors.password?.message} required>
-              <Input {...register('password')} type="password" placeholder="Min 8 characters" error={!!errors.password} disabled={isPending} />
+              <Input {...register('password')} type="password" placeholder="Minimal 8 karakter" error={!!errors.password} disabled={isPending} />
             </FormField>
           )}
 
@@ -202,10 +202,10 @@ const UserFormModal = ({ open, onClose, user = null }) => {
                   getValue={(o) => o._id}
                   onSearchChange={setOutletSearch}
                   isLoading={outletsLoading}
-                  placeholder={isEdit && currentOutletName ? currentOutletName : 'Search outlets…'}
+                  placeholder={isEdit && currentOutletName ? currentOutletName : 'Mencari outlet...'}
                   error={!!errors.outletId}
                   disabled={isPending}
-                  emptyMessage={debouncedOutletSearch ? `No outlets matching "${debouncedOutletSearch}"` : 'No active outlets found.'}
+                  emptyMessage={debouncedOutletSearch ? `Tidak ada outlet yang cocok "${debouncedOutletSearch}"` : 'Tidak ditemukan outlet aktif.'}
                 />
               )}
             />
@@ -216,13 +216,13 @@ const UserFormModal = ({ open, onClose, user = null }) => {
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
           <button type="button" onClick={onClose} disabled={isPending}
             className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50">
-            Cancel
+            Batal
           </button>
           <button type="submit" disabled={isPending}
             className={cn('flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md',
               'bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors disabled:opacity-60')}>
             {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {isPending ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save Changes' : 'Create User')}
+            {isPending ? (isEdit ? 'Menyimpan…' : 'Membuat…') : (isEdit ? 'Simpan Perubahan' : 'Membuat Pengguna')}
           </button>
         </div>
       </form>

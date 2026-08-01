@@ -1,12 +1,3 @@
-// src/pages/PayrollPage.jsx
-// Payroll management page.
-// Wired to: useGetPayrolls → GET /api/v1/payroll
-// Generate: GeneratePayrollModal → POST /api/v1/payroll/generate
-// Detail/actions: PayrollDetailModal (approve/reject/adjust/paid)
-//
-// Filters: status, month, year, search by employee name (client-side)
-// Pagination: shared Pagination component
-
 import { useState, useMemo }       from 'react'
 import { Banknote, FileText }      from 'lucide-react'
 
@@ -28,9 +19,6 @@ import { cn }                      from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
-// Roles that can manage (generate/approve/reject/adjust) payroll —
-// mirrors backend's MANAGE_PAYROLL grant (super_admin, tenant_admin only —
-// NOT manager, unlike most other operational modules).
 const MANAGE_ROLES = ['super_admin', 'tenant_admin']
 
 const MONTHS = [

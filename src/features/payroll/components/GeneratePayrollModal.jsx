@@ -1,13 +1,3 @@
-// src/features/payroll/components/GeneratePayrollModal.jsx
-//
-// Working Outlet architecture:
-//   There is no outlet selector in this form. Payroll is always
-//   generated for the current Working Outlet (useEffectiveOutletId()) —
-//   the same single source of truth the Navbar's Outlet Switcher writes
-//   to. If no specific Working Outlet is selected ("All Outlets"),
-//   generation is blocked entirely — there is no single outlet to
-//   generate for.
-
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -35,8 +25,6 @@ import useToast from '@/hooks/useToast'
 
 import { cn } from '@/lib/utils'
 
-// ── Formatters (mirrors PayrollTable.jsx / PayrollDetailModal.jsx) ──
-
 const formatIDR = (val) =>
   val != null
     ? new Intl.NumberFormat('id-ID', {
@@ -63,25 +51,25 @@ const schema = z.object({
 
   workingDays: z.coerce
     .number()
-    .min(1, 'Must be at least 1')
+    .min(1, 'Harus minimal 1')
     .max(31),
 })
 
 // ── Month names helper ────────────────────────────────────────
 
 const MONTHS = [
-  'January',
-  'February',
-  'March',
+  'Januari',
+  'Februari',
+  'Maret',
   'April',
-  'May',
-  'June',
-  'July',
-  'August',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
   'September',
-  'October',
+  'Oktober',
   'November',
-  'December',
+  'Desember',
 ]
 
 const currentYear = new Date().getFullYear()
@@ -101,7 +89,7 @@ const GenerateResult = ({ result, onClose }) => (
           </p>
 
           <p className="text-xs text-brand-600 dark:text-brand-500">
-            Generated
+            Berhasil Dibuat
           </p>
         </div>
       </div>
@@ -136,7 +124,7 @@ const GenerateResult = ({ result, onClose }) => (
           </p>
 
           <p className="text-xs text-muted-foreground">
-            Skipped
+            Dilewati
           </p>
         </div>
       </div>
@@ -145,7 +133,7 @@ const GenerateResult = ({ result, onClose }) => (
     {result.skippedItems?.length > 0 && (
       <div>
         <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-          Skipped employees
+          Karyawan yang Dilewati
         </p>
 
         <div className="space-y-1.5 max-h-40 overflow-y-auto">
@@ -172,7 +160,7 @@ const GenerateResult = ({ result, onClose }) => (
         onClick={onClose}
         className="px-4 py-2 text-sm font-semibold rounded-md bg-brand-500 hover:bg-brand-600 text-brand-950 transition-colors"
       >
-        Done
+        Selesai
       </button>
     </div>
   </div>
@@ -190,14 +178,14 @@ const PreviewScreen = ({ preview, onBack, onConfirm, isConfirming }) => {
         <DataTable>
           <DataTable.Head>
             <DataTable.HeadRow>
-              <DataTable.HeadCell>Employee</DataTable.HeadCell>
-              <DataTable.HeadCell>Attendance</DataTable.HeadCell>
-              <DataTable.HeadCell>Revenue</DataTable.HeadCell>
-              <DataTable.HeadCell>Salary</DataTable.HeadCell>
-              <DataTable.HeadCell>Meal Allowance</DataTable.HeadCell>
-              <DataTable.HeadCell>Daily Tier Bonus</DataTable.HeadCell>
-              <DataTable.HeadCell>Weekly Bonus</DataTable.HeadCell>
-              <DataTable.HeadCell>Total Pay</DataTable.HeadCell>
+              <DataTable.HeadCell>Karyawan</DataTable.HeadCell>
+              <DataTable.HeadCell>Kehadiran</DataTable.HeadCell>
+              <DataTable.HeadCell>Pendapatan</DataTable.HeadCell>
+              <DataTable.HeadCell>Gaji</DataTable.HeadCell>
+              <DataTable.HeadCell>Uang Makan</DataTable.HeadCell>
+              <DataTable.HeadCell>Bonus Tingkat Harian</DataTable.HeadCell>
+              <DataTable.HeadCell>Bonus Mingguan</DataTable.HeadCell>
+              <DataTable.HeadCell>Total Gaji</DataTable.HeadCell>
             </DataTable.HeadRow>
           </DataTable.Head>
 
@@ -213,7 +201,7 @@ const PreviewScreen = ({ preview, onBack, onConfirm, isConfirming }) => {
                     {emp.alreadyLocked && (
                       <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
                         <Lock className="w-2.5 h-2.5" />
-                        Locked
+                        Dikunci
                       </span>
                     )}
                   </div>
@@ -278,14 +266,14 @@ const PreviewScreen = ({ preview, onBack, onConfirm, isConfirming }) => {
           <p className="text-2xl font-bold text-foreground">
             {summary.totalEmployees}
           </p>
-          <p className="text-xs text-muted-foreground">Total Employees</p>
+          <p className="text-xs text-muted-foreground">Total Karyawan</p>
         </div>
 
         <div className="p-3 rounded-lg bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900">
           <p className="text-2xl font-bold text-brand-700 dark:text-brand-400">
             {formatIDR(summary.totalPayrollCost)}
           </p>
-          <p className="text-xs text-brand-600 dark:text-brand-500">Total Payroll Cost</p>
+          <p className="text-xs text-brand-600 dark:text-brand-500">Total Gaji</p>
         </div>
       </div>
 
@@ -297,7 +285,7 @@ const PreviewScreen = ({ preview, onBack, onConfirm, isConfirming }) => {
           disabled={isConfirming}
           className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
         >
-          Back
+          Kembali
         </button>
 
         <button
@@ -311,7 +299,7 @@ const PreviewScreen = ({ preview, onBack, onConfirm, isConfirming }) => {
           )}
         >
           {isConfirming && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-          {isConfirming ? 'Generating…' : 'Confirm & Generate Payroll'}
+          {isConfirming ? 'Membuat…' : 'Konfirmasi & Buat Gaji'}
         </button>
       </div>
     </div>
@@ -413,9 +401,9 @@ const GeneratePayrollModal = ({ open, onClose }) => {
 
       onError: (err) => {
         toast.error(
-          'Preview failed',
+          'Gagal membuat preview',
           err?.response?.data?.message ??
-            'Please check your inputs'
+            'Silahkan cek kembali inputan Anda'
         )
       },
     })
@@ -446,19 +434,19 @@ const GeneratePayrollModal = ({ open, onClose }) => {
 
         if ((resData.generated ?? 0) > 0) {
           toast.success(
-            'Payroll generated',
+            'Gaji berhasil dibuat',
             `${resData.generated} record${
               resData.generated !== 1 ? 's' : ''
-            } created`
+            } berhasil dibuat`
           )
         }
       },
 
       onError: (err) => {
         toast.error(
-          'Generation failed',
+          'Gagal membuat gaji',
           err?.response?.data?.message ??
-            'Please check your inputs'
+            'Silahkan cek kembali inputan Anda'
         )
       },
     })
@@ -468,11 +456,11 @@ const GeneratePayrollModal = ({ open, onClose }) => {
     <Modal
       open={open}
       onClose={handleClose}
-      title={step === 'preview' ? 'Preview Payroll' : 'Generate Payroll'}
+      title={step === 'preview' ? 'Preview Gaji' : 'Generate Gaji'}
       description={
         step === 'preview'
-          ? 'Review calculated payroll before generating. This is not yet saved.'
-          : 'Generate payroll records for all active employees in an outlet.'
+          ? 'Tinjau kembali perhitungan penggajian sebelum dibuat. Ini belum disimpan.'
+          : 'Buat record penggajian untuk semua karyawan aktif di outlet.'
       }
       size={step === 'preview' ? 'lg' : 'md'}
     >
@@ -500,7 +488,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
             {!hasWorkingOutlet && (
               <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-sm text-amber-800 dark:text-amber-400">
                 <TriangleAlert className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>Select a specific outlet from the switcher above to generate payroll.</span>
+                <span>Pilih outlet spesifik dari switcher di atas untuk membuat penggajian.</span>
               </div>
             )}
 
@@ -508,7 +496,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
             <div className="grid grid-cols-2 gap-3">
 
               <FormField
-                label="Month"
+                label="Bulan"
                 error={errors.month?.message}
                 required
               >
@@ -529,7 +517,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
               </FormField>
 
               <FormField
-                label="Year"
+                label="Tahun"
                 error={errors.year?.message}
                 required
               >
@@ -557,7 +545,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
 
             {/* Working days */}
             <FormField
-              label="Working Days This Period"
+              label="Hari Kerja Periode Ini"
               error={errors.workingDays?.message}
               required
             >
@@ -571,9 +559,9 @@ const GeneratePayrollModal = ({ open, onClose }) => {
               />
 
               <p className="text-[11px] text-muted-foreground mt-1">
-                Actual working days in the period
-                (e.g. 26 for a typical month).
-                Used to calculate monthly salary proration.
+                Jumlah hari kerja dalam periode ini
+                (misalnya 26 untuk bulan biasa).
+                Digunakan untuk menghitung prorata gaji bulanan.
               </p>
             </FormField>
 
@@ -587,7 +575,7 @@ const GeneratePayrollModal = ({ open, onClose }) => {
               disabled={previewMutation.isPending}
               className="px-4 py-2 text-sm font-medium rounded-md border border-input hover:bg-muted transition-colors disabled:opacity-50"
             >
-              Cancel
+              Batal
             </button>
 
             <button
@@ -606,8 +594,8 @@ const GeneratePayrollModal = ({ open, onClose }) => {
               )}
 
               {previewMutation.isPending
-                ? 'Loading Preview…'
-                : 'Preview Payroll'}
+                ? 'Memuat Preview…'
+                : 'Preview Gaji'}
             </button>
           </div>
         </form>

@@ -1,8 +1,3 @@
-// src/features/expenses/components/ExpenseTable.jsx
-// Expense data table.
-// outletId is a raw ObjectId string — resolved to name via useEntityMap().
-// Row click → opens ExpenseFormModal in edit mode.
-
 import { useState, useRef }                      from 'react'
 import { createPortal }                          from 'react-dom'
 import { MoreHorizontal, Pencil, Trash2 }        from 'lucide-react'
@@ -14,8 +9,6 @@ import { useDeleteExpense }                      from '../hooks/useExpenses'
 import useEntityMap                              from '@/hooks/useEntityMap'
 import useToast                                  from '@/hooks/useToast'
 import { cn }                                    from '@/lib/utils'
-
-// ── Helpers ───────────────────────────────────────────────────
 
 const formatCurrency = (amount) =>
   amount != null
@@ -30,8 +23,6 @@ const formatDate = (iso) =>
         day: '2-digit', month: 'short', year: 'numeric',
       })
     : '—'
-
-// ── Row Actions ───────────────────────────────────────────────
 
 const RowActions = ({ expense, onEdit }) => {
   const [open,       setOpen]       = useState(false)
@@ -50,14 +41,11 @@ const RowActions = ({ expense, onEdit }) => {
     })
   }
 
-  // Dropdown is portaled to <body> and positioned via fixed coordinates
-  // computed from the trigger's bounding rect, so it is never clipped by
-  // a table/card ancestor's overflow-hidden/auto.
   const handleOpen = (e) => {
     e.stopPropagation()
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
-      setMenuPos({ top: rect.bottom + 4, left: rect.right - 176 }) // 176px = w-44
+      setMenuPos({ top: rect.bottom + 4, left: rect.right - 176 })
     }
     setOpen((o) => !o)
   }
@@ -87,7 +75,7 @@ const RowActions = ({ expense, onEdit }) => {
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-muted transition-colors"
             >
               <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-              Edit Expense
+              Edit Pengeluaran
             </button>
             <div className="border-t border-border" />
             <button
@@ -101,7 +89,7 @@ const RowActions = ({ expense, onEdit }) => {
               )}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              {confirmDel ? 'Confirm delete?' : 'Delete'}
+              {confirmDel ? 'Konfirmasi Hapus?' : 'Hapus'}
             </button>
           </div>
         </>,
@@ -126,10 +114,10 @@ const ExpenseTable = ({ expenses, canManage }) => {
         <DataTable>
           <DataTable.Head>
             <DataTable.HeadRow>
-              <DataTable.HeadCell>Date</DataTable.HeadCell>
-              <DataTable.HeadCell>Category</DataTable.HeadCell>
-              <DataTable.HeadCell>Description</DataTable.HeadCell>
-              <DataTable.HeadCell>Amount</DataTable.HeadCell>
+              <DataTable.HeadCell>Tanggal</DataTable.HeadCell>
+              <DataTable.HeadCell>Kategori</DataTable.HeadCell>
+              <DataTable.HeadCell>Deskripsi</DataTable.HeadCell>
+              <DataTable.HeadCell>Jumlah</DataTable.HeadCell>
               <DataTable.HeadCell className="hidden lg:table-cell">Outlet</DataTable.HeadCell>
               {canManage && <DataTable.HeadCell className="w-10" />}
             </DataTable.HeadRow>
@@ -146,19 +134,15 @@ const ExpenseTable = ({ expenses, canManage }) => {
                   onClick={canManage ? () => setEditExpense(expense) : undefined}
                   className={canManage ? 'cursor-pointer' : undefined}
                 >
-                  {/* Date */}
                   <DataTable.Cell>
                     <span className="text-sm text-foreground tabular-nums whitespace-nowrap">
                       {formatDate(expense.date)}
                     </span>
                   </DataTable.Cell>
 
-                  {/* Category */}
                   <DataTable.Cell>
                     <ExpenseCategoryBadge category={expense.category} />
                   </DataTable.Cell>
-
-                  {/* Description */}
                   <DataTable.Cell>
                     <span
                       className="text-sm text-foreground truncate block max-w-[220px]"
@@ -168,19 +152,15 @@ const ExpenseTable = ({ expenses, canManage }) => {
                     </span>
                   </DataTable.Cell>
 
-                  {/* Amount */}
                   <DataTable.Cell>
                     <span className="text-sm font-semibold text-foreground tabular-nums">
                       {formatCurrency(expense.amount)}
                     </span>
                   </DataTable.Cell>
 
-                  {/* Outlet — hidden on small screens */}
                   <DataTable.Cell className="hidden lg:table-cell text-sm text-muted-foreground">
                     {outletName}
                   </DataTable.Cell>
-
-                  {/* Actions */}
                   {canManage && (
                     <DataTable.Cell onClick={(e) => e.stopPropagation()}>
                       <RowActions expense={expense} onEdit={setEditExpense} />
