@@ -46,7 +46,7 @@ const AuthLayout = () => {
           Hello Mr. Coffee
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Management
+          Management Dashboard
         </p>
       </div>
 
